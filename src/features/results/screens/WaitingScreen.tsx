@@ -1,16 +1,30 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { ScreenContainer, Text } from '../../../shared/components';
 import { colors, spacing } from '../../../shared/theme';
 import { routes } from '../../../navigation/routes';
 import { deleteLocalPhoto, mockSubmitOnboarding } from '../../../services';
-import { SubmitOnboardingRequest } from '../../../types';
+import { CAMERA_ANGLES, SubmitOnboardingRequest } from '../../../types';
 import { useOnboardingStore } from '../../../store/useOnboardingStore';
 
 /**
- * Anket + fotoğraf gönderildikten sonraki bekleme ekranı.
+ * Rutin dinamik olarak "belirleniyor" hissi vermesi için sırayla değişen
+ * durum mesajları — gerçek ilerlemeyi temsil etmez (Faz 1'de tek bir mock
+ * çağrısı var), yalnızca sonucun adım adım oluşturulduğu izlenimini verir.
+ */
+const STATUS_MESSAGES = [
+  'Fotoğrafların değerlendiriliyor',
+  'Cilt tipin analiz ediliyor',
+  'Cevapların eşleştiriliyor',
+  'Sana özel rutin oluşturuluyor',
+];
+
+const STATUS_INTERVAL_MS = 1400;
+
+/**
+ * Anket + fotoğraflar gönderildikten sonraki bekleme ekranı.
  *
  * GEÇİCİ: Gerçek Express backend'i hazır olana kadar `mockSubmitOnboarding`
  * kullanılıyor — backend hazır olduğunda `services/api.ts` içindeki gerçek
@@ -22,9 +36,17 @@ export function WaitingScreen() {
   const gender = useOnboardingStore((state) => state.gender);
   const answers = useOnboardingStore((state) => state.answers);
   const photoConsentGiven = useOnboardingStore((state) => state.photoConsentGiven);
-  const photo = useOnboardingStore((state) => state.photo);
+  const photos = useOnboardingStore((state) => state.photos);
   const setRecommendation = useOnboardingStore((state) => state.setRecommendation);
-  const setPhoto = useOnboardingStore((state) => state.setPhoto);
+  const resetPhotos = useOnboardingStore((state) => state.resetPhotos);
+  const [statusIndex, setStatusIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatusIndex((index) => (index + 1) % STATUS_MESSAGES.length);
+    }, STATUS_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (hasStarted.current) return;
@@ -35,25 +57,29 @@ export function WaitingScreen() {
         gender: gender ?? 'unspecified',
         answers,
         photoConsentGiven,
-        // Faz 1'de fotoğraf backend'e henüz yüklenmiyor; Faz 2'de gerçek
-        // yükleme akışı eklendiğinde burası backend referans id'sini taşıyacak.
-        photoReferenceId: null,
+        // Faz 1'de fotoğraflar backend'e henüz yüklenmiyor; Faz 2'de gerçek
+        // yükleme akışı eklendiğinde burası backend referans id'lerini
+        // açı bazında taşıyacak.
+        photoReferenceIds: null,
       };
 
       const response = await mockSubmitOnboarding(request);
       setRecommendation(response);
 
-      // KVKK: fotoğraf işlendikten hemen sonra yerel kopyayı sil.
-      if (photo?.uri) {
-        await deleteLocalPhoto(photo.uri);
-        setPhoto(null);
-      }
+      // KVKK: fotoğraflar işlendikten hemen sonra yerel kopyaları sil.
+      await Promise.all(
+        CAMERA_ANGLES.map((angle) => {
+          const photo = photos[angle];
+          return photo ? deleteLocalPhoto(photo.uri) : Promise.resolve();
+        }),
+      );
+      resetPhotos();
 
       router.replace(routes.results);
     };
 
     run();
-  }, [answers, gender, photo, photoConsentGiven, router, setPhoto, setRecommendation]);
+  }, [answers, gender, photos, photoConsentGiven, resetPhotos, router, setRecommendation]);
 
   return (
     <ScreenContainer>
@@ -63,7 +89,7 @@ export function WaitingScreen() {
           Rutinin hazırlanıyor
         </Text>
         <Text variant="body" secondary style={styles.subtitle}>
-          Cevaplarına göre sana özel bir sabah/akşam rutini oluşturuyoruz.
+          {STATUS_MESSAGES[statusIndex]}…
         </Text>
       </View>
     </ScreenContainer>

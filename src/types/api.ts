@@ -1,17 +1,17 @@
-import { Gender, QuestionnaireAnswers } from './domain';
+import { CameraAngle, Gender, QuestionnaireAnswers } from './domain';
 
 /**
  * Backend'e gönderilen onboarding verisi.
- * NOT: Fotoğraf, KVKK gereği ayrı ve kısa ömürlü bir uçtan (örn. imzalı
+ * NOT: Fotoğraflar, KVKK gereği ayrı ve kısa ömürlü bir uçtan (örn. imzalı
  * yükleme URL'si) gönderilmeli — bu obje yalnızca referans/consent bilgisini
- * taşır, fotoğrafın kendisini taşımaz.
+ * taşır, fotoğrafların kendisini taşımaz.
  */
 export interface SubmitOnboardingRequest {
   gender: Gender;
   answers: QuestionnaireAnswers;
   photoConsentGiven: boolean;
-  /** Fotoğraf yüklendiyse backend'in döndürdüğü geçici referans id'si. */
-  photoReferenceId: string | null;
+  /** Fotoğraflar yüklendiyse backend'in döndürdüğü geçici referans id'leri (açı bazında). */
+  photoReferenceIds: Partial<Record<CameraAngle, string>> | null;
 }
 
 /** Sabah/akşam rutininde tek bir adım. */

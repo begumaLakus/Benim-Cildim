@@ -1,31 +1,27 @@
 import { create } from 'zustand';
 
 import {
+  CameraAngle,
   CapturedPhoto,
+  CapturedPhotosByAngle,
+  EMPTY_CAPTURED_PHOTOS,
   EMPTY_QUESTIONNAIRE_ANSWERS,
   Gender,
   QuestionnaireAnswers,
   RoutineRecommendationResponse,
 } from '../types';
 
-/**
- * NOT: Bu dosya sabit klasör yapısında ayrı bir "store" klasörü olarak
- * belirtilmemişti; onboarding akışı features/ arası (gender, camera,
- * questionnaire, results) paylaşılan tek bir durumu yönettiği için burada,
- * shared/hooks yerine kendi klasöründe tutuldu. Bu bir mimari sapma değil,
- * belirtilmemiş bir noktadaki en az müdahaleli tercih — istenirse konumu
- * değiştirilebilir.
- */
 interface OnboardingState {
   gender: Gender | null;
   photoConsentGiven: boolean;
-  photo: CapturedPhoto | null;
+  photos: CapturedPhotosByAngle;
   answers: QuestionnaireAnswers;
   recommendation: RoutineRecommendationResponse | null;
 
   setGender: (gender: Gender) => void;
   setPhotoConsentGiven: (consentGiven: boolean) => void;
-  setPhoto: (photo: CapturedPhoto | null) => void;
+  setPhoto: (angle: CameraAngle, photo: CapturedPhoto | null) => void;
+  resetPhotos: () => void;
   setAnswers: (answers: QuestionnaireAnswers) => void;
   toggleConcern: (concern: QuestionnaireAnswers['concerns'][number]) => void;
   setRecommendation: (recommendation: RoutineRecommendationResponse | null) => void;
@@ -35,7 +31,7 @@ interface OnboardingState {
 const initialState = {
   gender: null,
   photoConsentGiven: false,
-  photo: null,
+  photos: EMPTY_CAPTURED_PHOTOS,
   answers: EMPTY_QUESTIONNAIRE_ANSWERS,
   recommendation: null,
 } satisfies Omit<
@@ -43,6 +39,7 @@ const initialState = {
   | 'setGender'
   | 'setPhotoConsentGiven'
   | 'setPhoto'
+  | 'resetPhotos'
   | 'setAnswers'
   | 'toggleConcern'
   | 'setRecommendation'
@@ -51,10 +48,10 @@ const initialState = {
 
 export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   ...initialState,
-
   setGender: (gender) => set({ gender }),
   setPhotoConsentGiven: (photoConsentGiven) => set({ photoConsentGiven }),
-  setPhoto: (photo) => set({ photo }),
+  setPhoto: (angle, photo) => set((state) => ({ photos: { ...state.photos, [angle]: photo } })),
+  resetPhotos: () => set({ photos: EMPTY_CAPTURED_PHOTOS }),
   setAnswers: (answers) => set({ answers }),
   toggleConcern: (concern) => {
     const current = get().answers;

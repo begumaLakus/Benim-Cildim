@@ -1,1 +1,2 @@
-export { CameraScreen } from './screens/CameraScreen';
+export { CameraCapture } from './components/CameraCapture';
+export type { CameraCaptureProps } from './components/CameraCapture';

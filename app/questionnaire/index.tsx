@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { QuestionnaireScreen } from '../../src/features/questionnaire';
+import { QuestionnaireIntroScreen } from '../../src/features/questionnaire';
 
-export default function QuestionnaireRoute() {
-  return <QuestionnaireScreen />;
+export default function QuestionnaireIntroRoute() {
+  return <QuestionnaireIntroScreen />;
 }

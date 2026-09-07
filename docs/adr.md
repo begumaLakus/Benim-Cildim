@@ -183,3 +183,51 @@ sorun tespit edildi:
 - Kök dizine `legacy-peer-deps=true` içeren bir `.npmrc` eklendi; böylece
   `npm install` her seferinde elle `--legacy-peer-deps` yazılmadan
   yukarıdaki zararsız çakışmayı otomatik aşıyor.
+
+## ADR-008: Anket akışının "tek soru, tek ekran" sihirbaza dönüştürülmesi
+
+**Durum:** Kabul edildi
+
+**Bağlam:** Onboarding akışı, kullanıcının isteğiyle şu sıraya göre yeniden
+düzenlendi: açılış ekranı ve marka/amaç ekranı (WelcomeScreen) olduğu gibi
+kalıyor — bu ikisi bu kararla değiştirilmedi, ileride Figma tasarımıyla
+değiştirilecek. Bundan sonraki her soru artık tek başına kendi ekranında
+geliyor (önceden tüm sorular `QuestionnaireScreen` içinde tek bir kaydırılan
+sayfadaydı). Sıra: anket başlangıç ekranı -> yaş aralığı (yeni soru) ->
+cinsiyet (önceden ayrı bir `GenderScreen`/route'du, artık sihirbazın bir
+adımı) -> kamera -> cilt tipi -> cilt endişeleri -> aktif madde kullanımı ->
+bilinen hassasiyet. Son adımın devam butonu "Rutinimi Oluştur, Sonucu Göster"
+metnini taşıyor ve bekleme ekranına geçiyor.
+
+**Kamera yerleşimi kararı:** Kullanıcı kamera adımının akışta nereye
+ekleneceğini bilinçli olarak açık bıraktı. Kamera, cinsiyet sorusundan hemen
+sonra ve kalan cilt/anket sorularından önce yerleştirildi — bu, kilitli
+brief'teki "cinsiyet seçimi -> fotoğraf çekimi -> anket" sırasını korur ve en
+donanım-yoğun/dikkat gerektiren adımı (3 açıdan fotoğraf çekimi) akışın
+başında, kullanıcı henüz taze motivasyonluyken bitirir.
+
+**Karar:**
+
+- Anket sihirbazı tek bir route'ta (`app/questionnaire/flow.tsx` ->
+  `QuestionnaireFlowScreen`) adım index'i olarak tutulur; her soru için ayrı
+  bir route açılmadı — geri tuşu ve ilerleme çubuğu tek yerden yönetiliyor.
+  Anket başlangıç ekranı ayrı bir route'tur (`app/questionnaire/index.tsx` ->
+  `QuestionnaireIntroScreen`).
+- Ortak adım iskeleti (`QuestionStepLayout` + `StepHeader`,
+  `features/questionnaire/components/`) geri oku + ilerleme çubuğu + başlık +
+  devam butonunu tüm adımlarda tekrar kullanır; mevcut `OptionCard`/`Button`
+  görsel dili değişmeden korunur.
+- Kamera artık ayrı bir route/ekran değil, sihirbazın bir adımı
+  (`features/questionnaire/steps/CameraStep.tsx`). Donanıma özgü
+  çekim/önizleme mantığı `features/camera/components/CameraCapture.tsx`'e
+  taşındı ve açı bazında (önden/soldan/sağdan) 3 kez kullanılıyor.
+- Yeni tipler: `AgeRange`, `CameraAngle` (`src/types/domain.ts`).
+  `QuestionnaireAnswers.ageRange` eklendi. Store'daki tekil `photo`/`setPhoto`
+  alanı, açı bazlı `photos: Record<CameraAngle, CapturedPhoto | null>` ve
+  `setPhoto(angle, photo)`/`resetPhotos()` ile değiştirildi.
+  `SubmitOnboardingRequest.photoReferenceId` (tekil) yerine
+  `photoReferenceIds` (açı bazlı, opsiyonel) kullanılıyor.
+- Bekleme ekranı (`WaitingScreen`) artık sırayla değişen durum mesajları
+  gösteriyor ("Fotoğrafların değerlendiriliyor" -> ... -> "Sana özel rutin
+  oluşturuluyor") — gerçek bir ilerleme yüzdesini temsil etmiyor, sonucun
+  adım adım oluşturulduğu izlenimini veriyor.

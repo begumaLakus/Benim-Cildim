@@ -22,7 +22,7 @@ export function WelcomeScreen() {
   const handleContinue = async () => {
     setPhotoConsentGiven(consentChecked);
     await setStoredPhotoConsent(consentChecked);
-    router.push(routes.onboardingGender);
+    router.push(routes.questionnaireIntro);
   };
 
   return (

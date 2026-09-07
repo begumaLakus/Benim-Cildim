@@ -1,14 +1,13 @@
 /**
- * Expo Router dosya bazlı yönlendirme kullanır (`app/` dizini); rota adları
- * orada oluşturulan dosya yoluna göre belirlenir. Bu sabitler, ekranlar
- * arasında `router.push(...)` çağrılarında string'leri elle yazmamak ve tek
- * bir yerden değiştirebilmek için tutulur.
+ * Anket akışı tek bir "sihirbaz" ekranında (questionnaireFlow) adım adım
+ * ilerler — her soru kendi route'una sahip değildir, akış kendi içindeki
+ * adım index'ini yönetir (bkz. QuestionnaireFlowScreen). Bu sayede geri tuşu
+ * ve ilerleme çubuğu tek bir yerden tutarlı yönetilir.
  */
 export const routes = {
   onboardingWelcome: '/onboarding',
-  onboardingGender: '/onboarding/gender',
-  camera: '/camera',
-  questionnaire: '/questionnaire',
+  questionnaireIntro: '/questionnaire',
+  questionnaireFlow: '/questionnaire/flow',
   resultsWaiting: '/results/waiting',
   results: '/results',
 } as const;
