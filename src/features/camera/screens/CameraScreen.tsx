@@ -20,16 +20,35 @@ export function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [previewUri, setPreviewUri] = useState<string | null>(null);
+  // Native kamera oturumu `onCameraReady` tetiklenene kadar hazır değildir;
+  // bundan önce takePictureAsync çağırmak CameraNotReadyException fırlatır.
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const setPhoto = useOnboardingStore((state) => state.setPhoto);
 
   const handleCapture = async () => {
-    const photo = await cameraRef.current?.takePictureAsync({ quality: 0.7 });
-    if (photo?.uri) {
-      setPreviewUri(photo.uri);
+    if (!isCameraReady || isCapturing) return;
+    setIsCapturing(true);
+    try {
+      const photo = await cameraRef.current?.takePictureAsync({ quality: 0.7 });
+      if (photo?.uri) {
+        setPreviewUri(photo.uri);
+      }
+    } catch {
+      // Kamera oturumu tam hazır olmadan veya kısa süreli bir donanım
+      // hatasında burada sessizce yutuyoruz — kullanıcı butona tekrar
+      // basabilir; akışı bir hata ekranıyla kesmeye gerek yok.
+    } finally {
+      setIsCapturing(false);
     }
   };
 
-  const handleRetake = () => setPreviewUri(null);
+  const handleRetake = () => {
+    setPreviewUri(null);
+    // CameraView yeniden mount olacağı için onCameraReady tekrar tetiklenene
+    // kadar hazır sayılmamalı.
+    setIsCameraReady(false);
+  };
 
   const handleConfirm = () => {
     if (!previewUri) return;
@@ -61,7 +80,12 @@ export function CameraScreen() {
         {previewUri ? (
           <Image source={{ uri: previewUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         ) : (
-          <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={FACING} />
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+            facing={FACING}
+            onCameraReady={() => setIsCameraReady(true)}
+          />
         )}
       </View>
 
@@ -72,7 +96,12 @@ export function CameraScreen() {
             <Button label="Devam Et" onPress={handleConfirm} />
           </>
         ) : (
-          <Button label="Fotoğraf Çek" onPress={handleCapture} />
+          <Button
+            label="Fotoğraf Çek"
+            onPress={handleCapture}
+            disabled={!isCameraReady}
+            loading={isCapturing}
+          />
         )}
       </View>
     </ScreenContainer>

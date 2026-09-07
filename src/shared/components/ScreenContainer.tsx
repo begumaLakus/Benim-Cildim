@@ -18,14 +18,18 @@ export function ScreenContainer({
   scrollable = false,
   style,
 }: PropsWithChildren<ScreenContainerProps>) {
-  const Wrapper = scrollable ? ScrollView : View;
-  const wrapperProps = scrollable
-    ? { contentContainerStyle: [styles.content, style] }
-    : { style: [styles.content, style] };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <Wrapper {...wrapperProps}>{children}</Wrapper>
+      {scrollable ? (
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, style]}
+          keyboardShouldPersistTaps="handled"
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={[styles.content, style]}>{children}</View>
+      )}
     </SafeAreaView>
   );
 }
@@ -37,6 +41,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    padding: spacing.lg,
+  },
+  // NOT: ScrollView'in contentContainerStyle'ında `flex: 1` KULLANMA — içerik
+  // ekran boyuna sabitlenip taşan kısmın kaydırılmasını engeller. Kısa
+  // içerikte de üstte yığılmayı önlemek için `flexGrow: 1` yeterli.
+  scrollContent: {
+    flexGrow: 1,
     padding: spacing.lg,
   },
 });
