@@ -1,3 +1,5 @@
+import type { IoniconsIconName } from '@react-native-vector-icons/ionicons';
+
 import { AgeRange, Gender, SkinConcern, SkinType } from '../../../types';
 
 export const AGE_RANGE_OPTIONS: { value: AgeRange; label: string }[] = [
@@ -15,19 +17,26 @@ export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: 'unspecified', label: 'Belirtmek istemiyorum' },
 ];
 
-export const SKIN_TYPE_OPTIONS: { value: SkinType; label: string }[] = [
-  { value: 'dry', label: 'Kuru' },
-  { value: 'oily', label: 'Yağlı' },
-  { value: 'combination', label: 'Karma' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'sensitive', label: 'Hassas' },
+/**
+ * Cilt tipi ve cilt endişeleri sorularına ikon eklendi — anketteki en görsel
+ * anlatılabilir iki soru bu ikisi. Diğer sorular (yaş, cinsiyet, evet/hayır
+ * soruları) bilinçli olarak ikonsuz bırakıldı; tüm sorulara ikon eklemek
+ * anketi gereksiz kalabalıklaştırırdı.
+ */
+export const SKIN_TYPE_OPTIONS: { value: SkinType; label: string; icon: IoniconsIconName }[] = [
+  { value: 'dry', label: 'Kuru', icon: 'leaf-outline' },
+  { value: 'oily', label: 'Yağlı', icon: 'water-outline' },
+  { value: 'combination', label: 'Karma', icon: 'contrast-outline' },
+  { value: 'normal', label: 'Normal', icon: 'checkmark-circle-outline' },
+  { value: 'sensitive', label: 'Hassas', icon: 'alert-circle-outline' },
 ];
 
-export const SKIN_CONCERN_OPTIONS: { value: SkinConcern; label: string }[] = [
-  { value: 'acne', label: 'Akne / sivilce' },
-  { value: 'redness', label: 'Kızarıklık' },
-  { value: 'darkSpots', label: 'Lekeler' },
-  { value: 'fineLines', label: 'İnce çizgiler' },
-  { value: 'dullness', label: 'Donukluk' },
-  { value: 'largePores', label: 'Büyük gözenekler' },
-];
+export const SKIN_CONCERN_OPTIONS: { value: SkinConcern; label: string; icon: IoniconsIconName }[] =
+  [
+    { value: 'acne', label: 'Akne / sivilce', icon: 'medkit-outline' },
+    { value: 'redness', label: 'Kızarıklık', icon: 'flame-outline' },
+    { value: 'darkSpots', label: 'Lekeler', icon: 'ellipse-outline' },
+    { value: 'fineLines', label: 'İnce çizgiler', icon: 'remove-outline' },
+    { value: 'dullness', label: 'Donukluk', icon: 'moon-outline' },
+    { value: 'largePores', label: 'Büyük gözenekler', icon: 'apps-outline' },
+  ];

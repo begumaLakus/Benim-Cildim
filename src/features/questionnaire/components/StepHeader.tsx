@@ -1,3 +1,4 @@
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -33,9 +34,11 @@ export function StepHeader({ stepNumber, totalSteps, onBack, tone = 'light' }: S
         onPress={onBack}
         style={styles.backButton}
       >
-        <Text variant="heading" onAccent={isDark} style={styles.backGlyph}>
-          ‹
-        </Text>
+        <Ionicons
+          name="chevron-back"
+          size={24}
+          color={isDark ? colors.textOnAccent : colors.textPrimary}
+        />
       </Pressable>
       <View style={[styles.track, isDark && styles.trackDark]}>
         <View style={[styles.fill, isDark && styles.fillDark, { width: `${progress * 100}%` }]} />
@@ -59,9 +62,6 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backGlyph: {
-    lineHeight: 28,
   },
   track: {
     flex: 1,

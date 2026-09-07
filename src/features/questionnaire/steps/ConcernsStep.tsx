@@ -25,6 +25,7 @@ export function ConcernsStep({ stepNumber, totalSteps, onNext, onBack }: StepPro
         <OptionCard
           key={option.value}
           label={option.label}
+          icon={option.icon}
           selected={answers.concerns.includes(option.value)}
           onPress={() => toggleConcern(option.value)}
         />

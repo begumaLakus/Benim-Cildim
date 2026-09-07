@@ -32,6 +32,7 @@ export function SkinTypeStep({ stepNumber, totalSteps, onNext, onBack }: StepPro
         <OptionCard
           key={option.value}
           label={option.label}
+          icon={option.icon}
           selected={selected === option.value}
           onPress={() => setSelected(option.value)}
         />
