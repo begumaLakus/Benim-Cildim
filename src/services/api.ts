@@ -1,15 +1,15 @@
-import Constants from 'expo-constants';
-
 import { RoutineRecommendationResponse, SubmitOnboardingRequest } from '../types';
 
 /**
- * Backend base URL. Faz 1 backend'i (Node.js/Express) henüz ayrı bir
- * repo/servis olarak deploy edilmediği için bu değer app.json'daki `extra`
- * alanından veya ortam değişkeninden okunur; yoksa yerel geliştirme adresine
- * düşer.
+ * Backend base URL. `.env` dosyasındaki `EXPO_PUBLIC_API_BASE_URL` Expo
+ * tarafından otomatik olarak inline edilir (ek bir babel eklentisi
+ * gerekmez) — bkz. `.env.example`. Tanımlı değilse yerel geliştirme
+ * adresine düşer.
+ *
+ * NOT: `EXPO_PUBLIC_` önekli değişkenler derlenmiş uygulama içinde açık
+ * metin olarak durur — buraya asla gizli/hassas bir anahtar konulmaz.
  */
-const API_BASE_URL: string =
-  (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ?? 'http://localhost:3000';
+const API_BASE_URL: string = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
 async function postJson<TResponse>(path: string, body: unknown): Promise<TResponse> {
   const response = await fetch(`${API_BASE_URL}${path}`, {

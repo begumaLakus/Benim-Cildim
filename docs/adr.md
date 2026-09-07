@@ -113,3 +113,73 @@ sabitlendi. `eslint-config-expo` (veya üstündeki `eslint-plugin-react`)
 ESLint 10 desteğini yayınladığında bu sabitleme kaldırılıp güncellenebilir.
 `.husky/pre-commit`: `lint-staged` (ESLint --fix + Prettier) ve
 `tsc --noEmit` çalıştırır.
+
+---
+
+## ADR-006: "İş Paketi 0" ile kilitli kararlar arasındaki çelişkinin çözümü
+
+**Durum:** Kabul edildi
+
+**Bağlam:** 4 Eylül tarihli "İş Paketleri" belgesindeki İş Paketi 0 (Proje
+Kurulumu), ADR-001/ADR-002'deki kilitli kararlarla üç noktada çelişiyordu:
+
+1. Navigasyon için "React Navigation kurulumu" istiyordu; kilitli karar
+   Expo Router'dı.
+2. Klasör yapısı olarak `src/screens, src/components, src/theme, ...` gibi
+   tip bazlı düz bir yapı istiyordu; kilitli karar bunu açıkça yasaklayıp
+   `features/` bazlı yapıyı zorunlu kılıyordu.
+3. "Vision Camera native modül gerektirdiği için Expo kullanacaksan EAS Dev
+   Client gerekiyor" diyerek kararı `react-native-vision-camera`ya
+   bağlıyordu; kilitli karar Faz 1'de `expo-camera` + Expo Go'yu, Vision
+   Camera'ya geçişi Faz 2'ye erteliyordu.
+
+**Karar:** Kilitli mimari kararlar (ADR-001, ADR-002) esas alındı; İş Paketi
+0 bu üç maddede zaten kurulmuş olan mimariye göre karşılanmış sayıldı:
+Expo Router + `features/` klasör yapısı + `expo-camera`/Expo Go ile devam
+ediliyor. İş Paketi dokümanının bu üç maddesi, kilitli kararlarla
+güncellenmesi gereken eski/senkron dışı metin olarak işaretlendi — proje
+kodunda bir değişiklik yapılmadı.
+
+**Bu kararla birlikte tamamlanan geri kalan İş Paketi 0 maddeleri:**
+GitHub reposu (kullanıcı tarafından oluşturuldu, bu repo push edildi),
+kısa proje tanımı içeren `README.md`, `.env`/`.env.example`
+(`EXPO_PUBLIC_API_BASE_URL`, Expo'nun yerleşik env desteğiyle, ek bir babel
+eklentisi gerekmeden).
+
+---
+
+## ADR-007: `npm start` çalıştırılamama sorununun giderilmesi
+
+**Durum:** Kabul edildi
+
+**Bağlam:** 7 Eylül'de projeyi yerelde ayağa kaldırmaya çalışırken üç ayrı
+sorun tespit edildi:
+
+1. `react-native-reanimated@4.x`'in zorunlu peer bağımlılığı olan
+   `react-native-worklets` `package.json`'da hiç listelenmemişti — Cuma
+   günkü ilk kurulumda `--legacy-peer-deps` ile paket dolaylı olarak
+   `node_modules`'a inmişti ama doğrudan bağımlılık olarak eklenmemişti;
+   kullanıcının kendi `npm install` çalıştırması bu paketi hiç kurmadı ve
+   uygulama bu yüzden açılışta çöktü ("There was a problem running the
+   requested app").
+2. `app.json`'da `web` platformu için ayrı bir yapılandırma bloğu
+   bulunuyordu ve `platforms` alanı kısıtlanmamıştı; bu, Expo CLI'nin
+   interaktif menüsünde yanlışlıkla `w` (web) tetiklenmesine ve
+   `react-native-web` kurulu olmadığı için sunucunun durmasına yol
+   açabiliyordu — proje Faz 1'de yalnızca Expo Go/mobil hedefliyor, web
+   hiç kullanılmıyor.
+3. `npm install` bazen `ERESOLVE` hatasıyla tamamen başarısız oluyordu:
+   `expo-router`'ın web'e özgü, opsiyonel `@expo/ui` (radix-ui/vaul)
+   bağımlılıkları `react-dom@^19.2.8` istiyor, proje ise Expo SDK 57'nin
+   desteklediği `react@19.2.3`'e sabit — bu web'e özgü dal hiç
+   kullanılmadığı için çakışma zararsız.
+
+**Karar:**
+
+- `react-native-worklets` doğrudan bağımlılık olarak `package.json`'a
+  eklendi (`npx expo install react-native-worklets` ile).
+- `app.json`'a `"platforms": ["ios", "android"]` eklendi, kullanılmayan
+  `web` bloğu kaldırıldı.
+- Kök dizine `legacy-peer-deps=true` içeren bir `.npmrc` eklendi; böylece
+  `npm install` her seferinde elle `--legacy-peer-deps` yazılmadan
+  yukarıdaki zararsız çakışmayı otomatik aşıyor.
