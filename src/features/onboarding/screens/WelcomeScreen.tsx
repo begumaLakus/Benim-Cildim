@@ -15,17 +15,21 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 /**
  * Onboarding'in ilk ekranı — Figma tasarımına göre yeniden yapıldı: üstte
  * tam genişlik görsel + marka adı, altta yuvarlatılmış "bottom sheet" kart
- * içinde slogan, KVKK açık rıza onayı ve CTA butonu.
+ * içinde slogan, KVKK açık rıza onayı ve CTA butonları.
  *
- * Figma tasarımından bilinçli sapmalar (kilitli kararlarla çakıştığı için):
- * 1) Tasarımdaki pasif "Kullanım Şartları..." metni burada gerçek, tıklanabilir
- *    bir onay kutusuna (ConsentCheckbox) dönüştürüldü — KVKK gereği fotoğraf
- *    çekimine geçmeden önce açık rıza zorunlu, pasif bir metinle geçiştirilemez.
- * 2) "Zaten hesabım var" (giriş) butonu kaldırıldı — Faz 1 mimarisinde henüz
- *    bir hesap/giriş sistemi yok, olmayan bir özelliği UI'da göstermiyoruz.
+ * Figma tasarımından bilinçli sapma: pasif "Kullanım Şartları..." metni
+ * gerçek, tıklanabilir bir onay kutusuna (ConsentCheckbox) dönüştürüldü —
+ * KVKK gereği fotoğraf çekimine geçmeden önce açık rıza zorunlu. Görsel
+ * ağırlığını dengelemek için metin küçük punto (caption) ve butonun hemen
+ * üzerinde, tek blok halinde gruplandı (önceki sürümde ayrı bir orta blok
+ * olarak `space-between` ile dağıtılıyordu, bu da ekranın yarısını
+ * kaplıyormuş gibi bir görünüme yol açıyordu).
  *
- * Renkler zaten kilitli tasarım sistemiyle birebir aynıydı (bkz. shared/theme/colors),
- * o yüzden burada hardcoded hex yerine doğrudan theme token'ları kullanılıyor.
+ * "Zaten hesabım var" butonu geri eklendi: dünkü uygulama haritası kararına
+ * göre (bkz. ADR-009 taslağı) hesabı olan kullanıcının anketi baştan
+ * doldurmadan doğrudan giriş ekranına geçebilmesi gerekiyor. Giriş ekranı
+ * şu an yer tutucu (`features/auth/screens/LoginScreen`) — gerçek form ve
+ * backend entegrasyonu ADR-009 onaylanınca eklenecek.
  */
 export function WelcomeScreen() {
   const router = useRouter();
@@ -61,15 +65,19 @@ export function WelcomeScreen() {
           </Text>
         </View>
 
-        <View style={styles.consentSection}>
+        <View style={styles.bottomActions}>
           <ConsentCheckbox
             checked={consentChecked}
             onToggle={() => setConsentChecked((prev) => !prev)}
             label="Kayıt amaçlı çekilecek fotoğrafımın, KVKK kapsamında yalnızca bu öneriyi oluşturmak için kısa süreliğine işleneceğini ve sonrasında silineceğini anladım, açık rızam ile onaylıyorum."
           />
+          <Button label="Hemen başla" onPress={handleContinue} disabled={!consentChecked} />
+          <Button
+            label="Zaten hesabım var"
+            variant="secondary"
+            onPress={() => router.push(routes.authLogin)}
+          />
         </View>
-
-        <Button label="Hemen başla" onPress={handleContinue} disabled={!consentChecked} />
       </View>
     </View>
   );
@@ -116,7 +124,7 @@ const styles = StyleSheet.create({
   taglineText: {
     textAlign: 'center',
   },
-  consentSection: {
-    justifyContent: 'center',
+  bottomActions: {
+    gap: spacing.sm,
   },
 });

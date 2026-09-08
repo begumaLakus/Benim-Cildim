@@ -6,6 +6,7 @@
  */
 export const routes = {
   onboardingWelcome: '/onboarding',
+  authLogin: '/auth/login',
   questionnaireIntro: '/questionnaire',
   questionnaireFlow: '/questionnaire/flow',
   resultsWaiting: '/results/waiting',

@@ -13,6 +13,11 @@ export interface ConsentCheckboxProps {
 /**
  * KVKK açık rıza onayı için kullanılan onay kutusu. Onboarding'de fotoğraf
  * çekimine geçmeden önce bu onay zorunludur.
+ *
+ * Bilinçli olarak "ince baskı" (fine print) boyutunda: metin `caption`
+ * varyantı (14px) kullanır, kutu küçük — bu bir dekoratif tercih değil,
+ * karşılama ekranının CTA'yı gölgede bırakmaması için gerekli. Metnin kendisi
+ * KVKK gereği kısaltılmadı, sadece görsel ağırlığı azaltıldı.
  */
 export function ConsentCheckbox({ checked, onToggle, label }: ConsentCheckboxProps) {
   return (
@@ -24,12 +29,12 @@ export function ConsentCheckbox({ checked, onToggle, label }: ConsentCheckboxPro
     >
       <View style={[styles.box, checked && styles.boxChecked]}>
         {checked ? (
-          <Text variant="bodyMedium" onAccent>
+          <Text variant="caption" onAccent>
             ✓
           </Text>
         ) : null}
       </View>
-      <Text variant="body" style={styles.label}>
+      <Text variant="caption" secondary style={styles.label}>
         {label}
       </Text>
     </Pressable>
@@ -40,17 +45,17 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 8,
   },
   box: {
-    width: 24,
-    height: 24,
+    width: 18,
+    height: 18,
     borderRadius: borderRadius.button / 4,
     borderWidth: 1.5,
     borderColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 1,
   },
   boxChecked: {
     backgroundColor: colors.accent,
