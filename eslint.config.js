@@ -5,7 +5,7 @@ module.exports = [
   ...expoConfig,
   prettierConfig,
   {
-    ignores: ['node_modules/**', '.expo/**', 'dist/**', 'android/**', 'ios/**'],
+    ignores: ['node_modules/**', '.expo/**', 'dist/**', 'android/**', 'ios/**', 'backend/**'],
   },
   {
     files: ['**/*.ts', '**/*.tsx'],

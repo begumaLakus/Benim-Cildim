@@ -231,3 +231,64 @@ başında, kullanıcı henüz taze motivasyonluyken bitirir.
   gösteriyor ("Fotoğrafların değerlendiriliyor" -> ... -> "Sana özel rutin
   oluşturuluyor") — gerçek bir ilerleme yüzdesini temsil etmiyor, sonucun
   adım adım oluşturulduğu izlenimini veriyor.
+
+---
+
+## ADR-009: Auth sistemi, ana uygulama iskeleti ve navigasyon mimarisi
+
+**Durum:** Kabul edildi
+
+**Bağlam:** Faz 1'in ilk kilitlenen kapsamı (onboarding -> anket -> sonuç)
+tek yönlü, doğrusal bir akıştı ve "sonuç ekranından sonra ne olur, kullanıcı
+uygulamayı tekrar açtığında nereye düşer, hesap sistemi nasıl işler" hiç
+tanımlanmamıştı. Bu boşluk fark edilince (bkz. sohbette paylaşılan
+"Benim Cildim — Uçtan Uca Uygulama Haritası" dokümanı) aşağıdaki kararlar
+alındı.
+
+**Karar:**
+
+1. **Auth zamanlaması:** Kullanıcı önce misafir olarak anketi doldurur,
+   kamerayla fotoğraflarını çeker ve rutin önerisini görür — hesap açması
+   bu noktadan ÖNCE istenmez. Sonuç ekranındaki "Rutinimi Kaydet ve Devam
+   Et" CTA'sı, hesap oluşturma/giriş akışının tek kapısıdır.
+2. **Auth yöntemi:** E-posta + şifre. Faz 1'de e-posta doğrulama (kayıt
+   sonrası link'e tıklama) adımı YOK — kayıt olunca doğrudan giriş
+   yapılır. Doğrulama, ileride ayrı bir iş paketi olarak eklenebilir.
+3. **Karşılama ekranındaki "Zaten hesabım var" butonu** (bkz. ADR-008'de
+   değişmeyeceği belirtilen WelcomeScreen), hesabı olan kullanıcının anketi
+   baştan doldurmadan doğrudan giriş ekranına (`/auth/login`) geçebilmesini
+   sağlar.
+4. **Ana uygulama iskeleti:** Auth sonrası, `(tabs)` adlı ayrı bir Expo
+   Router grubu altında 4 sekmeli bottom tab bar: Ana Sayfa/Rutinim
+   (varsayılan sekme, günlük sabah/akşam rutin checklist'i), Okumalar/
+   İçerik, Test Sonuçlarım/Geçmiş, Profilim. Bu grup, onboarding/anket/auth
+   stack'inden ayrı bir navigasyon köküdür.
+5. **Backend şimdi kuruluyor (mock'a devam edilmiyor):** Anket akışının
+   aksine, auth mock veriyle anlamlı şekilde test edilemez (şifre
+   hash'leme, oturum token'ı üretimi doğası gereği sunucu tarafı iştir) —
+   bu yüzden `mockApi.ts` deseni auth için tekrarlanmıyor, gerçek backend
+   frontend'le PARALEL kuruluyor, "önce frontend bitsin sonra backend"
+   sırası izlenmiyor.
+6. **Backend teknoloji seçimi:** Repo köküne (RN uygulamasından ayrı, kendi
+   `package.json`'ı olan) bir `backend/` klasörü eklenir — Node.js +
+   Express + TypeScript (ADR-001'deki kilitli karara uygun). Veritabanı
+   erişimi için Prisma ORM, geliştirmede sıfır kurulum için SQLite
+   (`backend/prisma/dev.db`, dosya tabanlı — Docker/Postgres kurulumu
+   gerekmez). Prisma kullanmanın asıl nedeni: gerçek üretime (beauty
+   center'a satış) geçmeden önce `schema.prisma`'da tek satır değiştirip
+   PostgreSQL'e geçmek düşük risklidir, veri modeli/sorgular aynı kalır.
+   Şifreler `bcrypt` ile hash'lenir (asla düz metin saklanmaz), oturumlar
+   JWT (`jsonwebtoken`) ile yönetilir.
+7. **Anket SORULARI (soru metinleri/seçenekleri) veritabanında değil,
+   koddadır** (`src/features/questionnaire/data/questions.ts`) — bunlar
+   statik UI içeriğidir, kullanıcı verisi değildir; bir CMS/admin panel
+   olmadığı sürece kodda tutmak standarttır ve ekstra bir backend
+   sorgusu gerektirmez. **Anket CEVAPLARI (kullanıcının verdiği yanıtlar)
+   ise, kullanıcı hesaba bağlandığı andan itibaren backend'de saklanır**
+   (`RoutineHistory` tablosu) — "Test Sonuçlarım" sekmesi ve cihazlar
+   arası erişim bunu zorunlu kılar. Misafir aşamasında (hesap yokken)
+   cevaplar sadece Zustand store'da, geçicidir.
+8. **Navigasyon mantığı:** `app/index.tsx`, `expo-secure-store`'da bir
+   oturum token'ı var mı kontrolüne göre yönlendirir — varsa doğrudan
+   `(tabs)/home`, yoksa (ve yarım kalmış bir anket taslağı yoksa)
+   `/onboarding`.

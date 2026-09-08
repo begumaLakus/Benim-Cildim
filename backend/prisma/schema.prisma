@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Faz 1 auth: e-posta + sifre. E-posta dogrulama alani kasitli olarak yok
+/// (ADR-009 — dogrulama Faz 1 kapsami disi birakildi).
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  passwordHash   String
+  createdAt      DateTime         @default(now())
+  routineHistory RoutineHistory[]
+}
+
+/// Kullanicinin hesaba baglanmis her anket+rutin sonucu. Anket cevaplari ve
+/// rutin onerisi JSON string olarak saklaniyor — semalari RN tarafindaki
+/// QuestionnaireAnswers / RoutineRecommendationResponse tipleriyle birebir
+/// eslesiyor (src/types/api.ts, src/types/domain.ts). Faz 1'de sadece
+/// yaziliyor; "Test Sonuclarim" sekmesi bunu okuyacak endpoint'i Faz
+/// sonraki adimda ekleyecek.
+model RoutineHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  answersJson String
+  routineJson String
+  createdAt   DateTime @default(now())
+}

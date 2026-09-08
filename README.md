@@ -8,7 +8,8 @@ merkezinin ürün kataloğunun eklenmesine açık tasarlandı (bkz. `docs/adr.md
 ## Stack
 
 React Native + TypeScript (strict) · Expo (Expo Go, Faz 1) · Expo Router ·
-Zustand · Node.js/Express backend (henüz ayrı repo olarak yok — bkz. aşağı).
+Zustand · Node.js/Express + Prisma/SQLite backend (`backend/`, ayrı bir
+`package.json`'ı olan bağımsız paket — bkz. aşağı).
 
 ## Başlarken
 
@@ -20,11 +21,26 @@ npm start
 
 Açılan QR kodu telefondaki **Expo Go** uygulamasıyla okut.
 
+## Backend'i çalıştırma (`backend/`)
+
+```bash
+cd backend
+npm install
+cp .env.example .env   # JWT_SECRET'i istersen değiştir, SQLite ek kurulum istemez
+npx prisma migrate dev --name init
+npm run dev
+```
+
+`http://localhost:3000/api/health` 200 dönüyorsa backend ayakta demektir.
+Şu an sadece `/api/auth/sign-up` ve `/api/auth/login` uçları var (bkz.
+ADR-009). Onboarding/anket/rutin uçları (`/api/onboarding`) henüz backend'de
+yok — `src/services/mockApi.ts` bunun için hâlâ kullanılıyor.
+
 ## Durum
 
-Faz 1 iskeleti kuruldu: onboarding (KVKK rızası + cinsiyet seçimi), kamera,
-anket, bekleme ve sonuç ekranları uçtan uca çalışıyor. Express backend'i henüz
-yok — `src/services/mockApi.ts`, gerçek API ile aynı sözleşmeyi kullanan sahte
-gecikmeli bir yanıt üretiyor.
+Faz 1 iskeleti kuruldu: onboarding (KVKK rızası), kamera, anket, bekleme ve
+sonuç ekranları uçtan uca çalışıyor. Auth (e-posta+şifre, kayıt/giriş) ve ana
+uygulama iskeleti (4 sekmeli tab bar) ADR-009 ile kararlaştırıldı,
+geliştirmesi sürüyor.
 
 Mimari kararlar ve gerekçeleri için `docs/adr.md` dosyasına bakın.
