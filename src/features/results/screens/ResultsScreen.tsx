@@ -2,12 +2,19 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Button, ScreenContainer, Text } from '../../../shared/components';
+import { Button, RoutineStepRow, ScreenContainer, Text } from '../../../shared/components';
 import { spacing } from '../../../shared/theme';
 import { routes } from '../../../navigation/routes';
 import { useOnboardingStore } from '../../../store/useOnboardingStore';
-import { RoutineStepRow } from '../components/RoutineStepRow';
 
+/**
+ * NOT (ADR-009): "Rutinimi Kaydet ve Devam Et" auth kapısının tek girişidir.
+ * Backend'de henüz bir `RoutineHistory` yazma ucu yok (bkz. ADR-009, madde 7)
+ * — bu yüzden şu an hesap oluşturulduğunda öneri sadece bu oturumdaki
+ * Zustand store'da taşınıyor, uygulama kapanıp açılırsa kaybolur. Bu uç
+ * eklenince burada (ve SignUpScreen'de) rutini backend'e POST eden bir
+ * çağrı eklenecek.
+ */
 export function ResultsScreen() {
   const router = useRouter();
   const recommendation = useOnboardingStore((state) => state.recommendation);
@@ -52,7 +59,18 @@ export function ResultsScreen() {
         ))}
       </View>
 
-      <Button label="Baştan Başla" variant="secondary" onPress={handleRestart} />
+      <View style={styles.actions}>
+        <Button
+          label="Rutinimi Kaydet ve Devam Et"
+          onPress={() => router.push(routes.authSignUp)}
+        />
+        <Button
+          label="Zaten hesabım var"
+          variant="secondary"
+          onPress={() => router.push(routes.authLogin)}
+        />
+        <Button label="Baştan Başla" variant="secondary" onPress={handleRestart} />
+      </View>
     </ScreenContainer>
   );
 }
@@ -67,5 +85,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: spacing.sm,
+  },
+  actions: {
+    gap: spacing.sm,
   },
 });

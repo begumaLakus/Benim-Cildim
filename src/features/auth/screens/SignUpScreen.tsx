@@ -9,9 +9,9 @@ import { ApiRequestError } from '../../../services';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { validateEmail, validatePassword } from '../utils/validation';
 
-export function LoginScreen() {
+export function SignUpScreen() {
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
+  const signUp = useAuthStore((state) => state.signUp);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,10 +32,12 @@ export function LoginScreen() {
 
     setIsSubmitting(true);
     try {
-      await login({ email: email.trim().toLowerCase(), password });
+      await signUp({ email: email.trim().toLowerCase(), password });
       router.replace(routes.tabsHome);
     } catch (error) {
-      if (error instanceof ApiRequestError) {
+      if (error instanceof ApiRequestError && error.code === 'EMAIL_TAKEN') {
+        setEmailError(error.message);
+      } else if (error instanceof ApiRequestError) {
         setFormError(error.message);
       } else {
         setFormError('Sunucuya ulaşılamadı — backend çalışıyor mu? (bkz. README)');
@@ -48,7 +50,10 @@ export function LoginScreen() {
   return (
     <ScreenContainer scrollable>
       <View style={styles.header}>
-        <Text variant="heading">Giriş Yap</Text>
+        <Text variant="heading">Hesap Oluştur</Text>
+        <Text variant="body" secondary style={styles.subtitle}>
+          Rutinini kaydetmek ve ilerleyişini takip etmek için bir hesap oluştur.
+        </Text>
       </View>
 
       <View style={styles.form}>
@@ -68,29 +73,22 @@ export function LoginScreen() {
           onChangeText={setPassword}
           errorMessage={passwordError}
           secureTextEntry
-          autoComplete="password"
-          placeholder="Şifren"
+          autoComplete="new-password"
+          placeholder="En az 8 karakter"
         />
         {formError ? (
           <Text variant="caption" style={styles.formError}>
             {formError}
           </Text>
         ) : null}
-        <Text
-          variant="caption"
-          style={styles.forgotPassword}
-          onPress={() => router.push(routes.authForgotPassword)}
-        >
-          Şifremi unuttum
-        </Text>
       </View>
 
       <View style={styles.actions}>
-        <Button label="Giriş Yap" onPress={handleSubmit} loading={isSubmitting} />
+        <Button label="Hesap Oluştur" onPress={handleSubmit} loading={isSubmitting} />
         <Button
-          label="Hesabım yok, oluştur"
+          label="Zaten hesabım var"
           variant="secondary"
-          onPress={() => router.push(routes.authSignUp)}
+          onPress={() => router.push(routes.authLogin)}
         />
       </View>
     </ScreenContainer>
@@ -101,16 +99,15 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.lg,
   },
+  subtitle: {
+    marginTop: spacing.sm,
+  },
   form: {
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
   formError: {
     color: colors.error,
-  },
-  forgotPassword: {
-    color: colors.accent,
-    textAlign: 'right',
   },
   actions: {
     gap: spacing.sm,

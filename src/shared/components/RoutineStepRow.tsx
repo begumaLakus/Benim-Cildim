@@ -3,9 +3,10 @@ import type { IoniconsIconName } from '@react-native-vector-icons/ionicons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Card, Text } from '../../../shared/components';
-import { borderRadius, colors, spacing } from '../../../shared/theme';
-import { RoutineStep } from '../../../types';
+import { Card } from './Card';
+import { Text } from './Text';
+import { borderRadius, colors, spacing } from '../theme';
+import { RoutineStep } from '../../types';
 
 /**
  * Ürün kategorisine göre temsili bir ikon — gerçek bir ürün fotoğrafı değil,

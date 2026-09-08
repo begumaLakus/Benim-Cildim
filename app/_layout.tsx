@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { colors } from '../src/shared/theme';
+import { useAuthStore } from '../src/store/useAuthStore';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Splash zaten gizlenmişse görmezden gel.
@@ -24,13 +25,22 @@ export default function RootLayout() {
     Inter_500Medium,
   });
 
+  const isAuthHydrating = useAuthStore((state) => state.isHydrating);
+  const hydrateAuth = useAuthStore((state) => state.hydrate);
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    hydrateAuth();
+  }, [hydrateAuth]);
+
+  const isReady = (fontsLoaded || fontError) && !isAuthHydrating;
+
+  useEffect(() => {
+    if (isReady) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
-  }, [fontsLoaded, fontError]);
+  }, [isReady]);
 
-  if (!fontsLoaded && !fontError) {
+  if (!isReady) {
     return null;
   }
 

@@ -292,3 +292,31 @@ alındı.
    oturum token'ı var mı kontrolüne göre yönlendirir — varsa doğrudan
    `(tabs)/home`, yoksa (ve yarım kalmış bir anket taslağı yoksa)
    `/onboarding`.
+
+---
+
+## ADR-010: Auth sonrası ana uygulama alanı için deneme pembe palette
+
+**Durum:** Kabul edildi (deneme aşamasında)
+
+**Bağlam:** Kullanıcının başta düşündüğü 3 pembe ton (F4DBD8, C09891, BEA8A7)
+proje yöneticisi tarafından da onaylandı — mevcut sade kahve/bej palette
+beğenildi ama "hiç pembe yok, bir ton eklensin" geri bildirimi geldi.
+Onboarding/anket akışı (ADR-004'teki kilitli 5 renkli palette) BİLİNÇLİ
+OLARAK bundan etkilenmiyor — kullanıcı o kısmın değişmesini istemedi.
+
+**Karar:**
+
+- `src/shared/theme/colors.ts`'e AYRI bir `tabColors` nesnesi eklendi
+  (`background`, `surface`, `highlight`) — orijinal `colors` nesnesi
+  değiştirilmedi, üzerine yazılmadı.
+- `ScreenContainer` ve `Card` bileşenlerine `tone?: 'default' | 'tabs'`
+  prop'u eklendi (varsayılan `'default'`, mevcut hiçbir ekran davranışı
+  değişmedi). `'tabs'` verilince `tabColors` kullanılır.
+- Butonlar/CTA'lar BİLEREK pembeye kaydırılmadı — marka aksiyon rengi
+  (kahve, `colors.accent`) tüm uygulamada tek ve tutarlı kalıyor, pembe
+  sadece zemin/yüzey/rozet gibi dekoratif alanlarda kullanılıyor.
+- İlk uygulama alanı: `ProfileScreen` (deneme). Beğenilirse Ana Sayfa,
+  Okumalar ve Test Sonuçlarım ekranlarına da aynı `tone="tabs"` ile
+  genişletilecek; tab bar'ın kendisi (`app/(tabs)/_layout.tsx`) henüz
+  değiştirilmedi.
