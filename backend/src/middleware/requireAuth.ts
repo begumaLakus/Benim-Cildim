@@ -6,12 +6,6 @@ export interface AuthenticatedRequest extends Request {
   userId?: string;
 }
 
-/**
- * Simdilik hicbir route bunu kullanmiyor (Faz 1'de sadece auth uclari var) —
- * ama RoutineHistory kaydetme/okuma uclari eklenince (bkz. ADR-009, madde 7)
- * dogrudan buraya baglanacak. Onceden hazirlamak, o ucları eklerken auth
- * mantigini tekrar yazmayi/kopyalamayi onluyor.
- */
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;

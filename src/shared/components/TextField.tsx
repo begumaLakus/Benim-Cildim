@@ -11,12 +11,7 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   testID?: string;
 }
 
-/**
- * Auth formlarıyla birlikte eklenen ilk metin girişi bileşeni (anket sadece
- * seçim kartları kullandığı için daha önce gerekmemişti). Buton yüksekliği
- * (52px) ve border radius'uyla (16) tutarlı — aynı "dolgulu, düz, gölgesiz"
- * dil sürdürülüyor.
- */
+/** Metin girişi bileşeni — buton yüksekliği/border radius'uyla tutarlı, aynı düz/gölgesiz dil. */
 export function TextField({ label, errorMessage, testID, ...inputProps }: TextFieldProps) {
   return (
     <View>

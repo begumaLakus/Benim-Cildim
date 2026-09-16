@@ -10,11 +10,12 @@ datasource db {
 /// Faz 1 auth: e-posta + sifre. E-posta dogrulama alani kasitli olarak yok
 /// (ADR-009 — dogrulama Faz 1 kapsami disi birakildi).
 model User {
-  id             String           @id @default(cuid())
-  email          String           @unique
-  passwordHash   String
-  createdAt      DateTime         @default(now())
-  routineHistory RoutineHistory[]
+  id              String            @id @default(cuid())
+  email           String            @unique
+  passwordHash    String
+  createdAt       DateTime          @default(now())
+  routineHistory  RoutineHistory[]
+  routineProgress RoutineProgress[]
 }
 
 /// Kullanicinin hesaba baglanmis her anket+rutin sonucu. Anket cevaplari ve
@@ -30,4 +31,23 @@ model RoutineHistory {
   answersJson String
   routineJson String
   createdAt   DateTime @default(now())
+}
+
+/// Gunluk rutin tik atma durumu (bkz. ADR-016). `date` bilerek kullanicinin
+/// YEREL gun anahtari olarak RN tarafindan gonderiliyor ("YYYY-MM-DD") —
+/// sunucu UTC gunu kullanirsa gece yarisina yakin kullanicilarda yanlis
+/// gune yazabilirdi. `stepId`, rutin JSON'u icindeki adim id'sine
+/// (orn. "am-cleanser") referans verir — ayri bir RoutineStep tablosu
+/// olmadigi icin gercek bir foreign key DEGIL, sadece esleme amacli bir
+/// string. `@@unique` ayni gun+adim icin ikinci bir satir olusmasini
+/// (cift POST/toggle race'i) engelliyor.
+model RoutineProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  date        String
+  stepId      String
+  completedAt DateTime @default(now())
+
+  @@unique([userId, date, stepId])
 }

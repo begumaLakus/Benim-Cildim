@@ -11,13 +11,8 @@ export interface ConsentCheckboxProps {
 }
 
 /**
- * KVKK açık rıza onayı için kullanılan onay kutusu. Onboarding'de fotoğraf
- * çekimine geçmeden önce bu onay zorunludur.
- *
- * Bilinçli olarak "ince baskı" (fine print) boyutunda: metin `caption`
- * varyantı (14px) kullanır, kutu küçük — bu bir dekoratif tercih değil,
- * karşılama ekranının CTA'yı gölgede bırakmaması için gerekli. Metnin kendisi
- * KVKK gereği kısaltılmadı, sadece görsel ağırlığı azaltıldı.
+ * KVKK açık rıza onayı — onboarding'de fotoğraf çekimine geçmeden önce zorunlu.
+ * Bilinçli olarak küçük boyutta: CTA'yı gölgede bırakmasın, metin kısaltılmadı.
  */
 export function ConsentCheckbox({ checked, onToggle, label }: ConsentCheckboxProps) {
   return (

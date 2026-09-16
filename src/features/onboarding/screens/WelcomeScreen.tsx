@@ -12,25 +12,6 @@ import { ConsentCheckbox } from '../components/ConsentCheckbox';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-/**
- * Onboarding'in ilk ekranı — Figma tasarımına göre yeniden yapıldı: üstte
- * tam genişlik görsel + marka adı, altta yuvarlatılmış "bottom sheet" kart
- * içinde slogan, KVKK açık rıza onayı ve CTA butonları.
- *
- * Figma tasarımından bilinçli sapma: pasif "Kullanım Şartları..." metni
- * gerçek, tıklanabilir bir onay kutusuna (ConsentCheckbox) dönüştürüldü —
- * KVKK gereği fotoğraf çekimine geçmeden önce açık rıza zorunlu. Görsel
- * ağırlığını dengelemek için metin küçük punto (caption) ve butonun hemen
- * üzerinde, tek blok halinde gruplandı (önceki sürümde ayrı bir orta blok
- * olarak `space-between` ile dağıtılıyordu, bu da ekranın yarısını
- * kaplıyormuş gibi bir görünüme yol açıyordu).
- *
- * "Zaten hesabım var" butonu geri eklendi: dünkü uygulama haritası kararına
- * göre (bkz. ADR-009 taslağı) hesabı olan kullanıcının anketi baştan
- * doldurmadan doğrudan giriş ekranına geçebilmesi gerekiyor. Giriş ekranı
- * şu an yer tutucu (`features/auth/screens/LoginScreen`) — gerçek form ve
- * backend entegrasyonu ADR-009 onaylanınca eklenecek.
- */
 export function WelcomeScreen() {
   const router = useRouter();
   const [consentChecked, setConsentChecked] = useState(false);
@@ -44,8 +25,7 @@ export function WelcomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* NOT: Görsel projede yok — assets/images/manken1.jpg olarak manuel eklenmeli,
-          aksi halde Metro bu dosyayı bulamadığı için build hata verir. */}
+      {}
       <ImageBackground
         source={require('../../../../assets/images/manken1.jpg')}
         style={styles.imageHeader}

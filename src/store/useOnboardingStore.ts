@@ -17,6 +17,8 @@ interface OnboardingState {
   photos: CapturedPhotosByAngle;
   answers: QuestionnaireAnswers;
   recommendation: RoutineRecommendationResponse | null;
+  /** `recommendation` backend'e zaten yazıldı mı — tekrar tekrar yazılmasını önler. */
+  recommendationSynced: boolean;
 
   setGender: (gender: Gender) => void;
   setPhotoConsentGiven: (consentGiven: boolean) => void;
@@ -25,6 +27,7 @@ interface OnboardingState {
   setAnswers: (answers: QuestionnaireAnswers) => void;
   toggleConcern: (concern: QuestionnaireAnswers['concerns'][number]) => void;
   setRecommendation: (recommendation: RoutineRecommendationResponse | null) => void;
+  markRecommendationSynced: () => void;
   reset: () => void;
 }
 
@@ -34,6 +37,7 @@ const initialState = {
   photos: EMPTY_CAPTURED_PHOTOS,
   answers: EMPTY_QUESTIONNAIRE_ANSWERS,
   recommendation: null,
+  recommendationSynced: false,
 } satisfies Omit<
   OnboardingState,
   | 'setGender'
@@ -43,6 +47,7 @@ const initialState = {
   | 'setAnswers'
   | 'toggleConcern'
   | 'setRecommendation'
+  | 'markRecommendationSynced'
   | 'reset'
 >;
 
@@ -65,6 +70,8 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       },
     });
   },
-  setRecommendation: (recommendation) => set({ recommendation }),
+  // Yeni oneri geldiginde senkron bayragi da sifirlanir.
+  setRecommendation: (recommendation) => set({ recommendation, recommendationSynced: false }),
+  markRecommendationSynced: () => set({ recommendationSynced: true }),
   reset: () => set({ ...initialState }),
 }));

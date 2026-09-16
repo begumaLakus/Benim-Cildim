@@ -2,17 +2,10 @@ import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 
 import { login as loginRequest, signUp as signUpRequest } from '../services/authApi';
+import { saveRoutineHistory } from '../services/api';
 import { AuthCredentials, AuthResponse, AuthUser } from '../types';
+import { useOnboardingStore } from './useOnboardingStore';
 
-/**
- * NOT: Bu dosya `expo-secure-store` paketine ihtiyaç duyuyor — henüz
- * `package.json`'a eklenmedi. Çalıştırmadan önce:
- *
- *   npx expo install expo-secure-store
- *
- * (Kurulumu kasıtlı olarak burada, elle çalıştırmıyorum — bkz. daha önceki
- * npm install/Windows sembolik link sorunu; bkz. proje geçmişi.)
- */
 const SESSION_STORAGE_KEY = 'benim-cildim-auth-session';
 
 interface AuthState {
@@ -32,6 +25,26 @@ async function persistSession(session: AuthResponse | null): Promise<void> {
     await SecureStore.setItemAsync(SESSION_STORAGE_KEY, JSON.stringify(session));
   } else {
     await SecureStore.deleteItemAsync(SESSION_STORAGE_KEY);
+  }
+}
+
+/**
+ * Misafirken toplanan rutin onerisi varsa, giris/kayittan hemen sonra
+ * backend'e yazar. `recommendationSynced` tekrar yazmayi engeller; hata
+ * olursa sessizce yutulur (kullaniciyi giristen sonra engellememek icin).
+ */
+async function syncGuestRoutineIfPresent(token: string): Promise<void> {
+  const { recommendation, recommendationSynced, answers, markRecommendationSynced } =
+    useOnboardingStore.getState();
+  if (!recommendation || recommendationSynced) {
+    return;
+  }
+
+  try {
+    await saveRoutineHistory({ answers, routine: recommendation.routine }, token);
+    markRecommendationSynced();
+  } catch {
+    // bkz. yukaridaki not — sessizce yut, akisi kesme.
   }
 }
 
@@ -60,12 +73,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     const session = await signUpRequest(credentials);
     await persistSession(session);
     set({ token: session.token, user: session.user });
+    await syncGuestRoutineIfPresent(session.token);
   },
 
   login: async (credentials) => {
     const session = await loginRequest(credentials);
     await persistSession(session);
     set({ token: session.token, user: session.user });
+    await syncGuestRoutineIfPresent(session.token);
   },
 
   logout: async () => {

@@ -9,11 +9,7 @@ export interface StepHeaderProps {
   stepNumber: number;
   totalSteps: number;
   onBack: () => void;
-  /**
-   * 'light' normal (açık zemin) soru ekranları için; 'dark' kamera gibi
-   * koyu/dolu ekranların üzerine bindirilen başlık için kullanılır — aynı
-   * geri + ilerleme çubuğu deseni, iki zeminde de estetik tutarlılık sağlar.
-   */
+
   tone?: 'light' | 'dark';
 }
 

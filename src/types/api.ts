@@ -1,11 +1,6 @@
-import { CameraAngle, Gender, QuestionnaireAnswers } from './domain';
+import { CameraAngle, Gender, QuestionnaireAnswers, SkinConcern, SkinType } from './domain';
 
-/**
- * Backend'e gönderilen onboarding verisi.
- * NOT: Fotoğraflar, KVKK gereği ayrı ve kısa ömürlü bir uçtan (örn. imzalı
- * yükleme URL'si) gönderilmeli — bu obje yalnızca referans/consent bilgisini
- * taşır, fotoğrafların kendisini taşımaz.
- */
+/** Backend'e gönderilen onboarding verisi — fotoğrafların kendisini değil, referans/consent bilgisini taşır (KVKK). */
 export interface SubmitOnboardingRequest {
   gender: Gender;
   answers: QuestionnaireAnswers;
@@ -29,20 +24,47 @@ export interface RoutinePlan {
   evening: RoutineStep[];
 }
 
+/** Rutinim'deki cilt etiketi için ham enum değerler — Türkçe formatlama `skinSummary.ts`'te. */
+export interface SkinSummary {
+  skinType: SkinType | null;
+  concerns: SkinConcern[];
+}
+
 /**
- * Öneri response şeması.
- *
- * `productSuggestion` alanı KASITLI olarak Faz 1'de `null` döner — Faz 3'te
- * güzellik merkezinin ürün kataloğu bu alana bağlanacak. Bu alanı şemadan
- * çıkarma; sözleşmenin ileriye dönük genişleyebilirliği bu alana bağlı.
+ * Öneri response şeması. `productSuggestion` KASITLI olarak `null` döner —
+ * Faz 3'teki ürün kataloğu için ayrılmış, şemadan çıkarılmamalı.
  */
 export interface RoutineRecommendationResponse {
   routine: RoutinePlan;
   productSuggestion: null;
   generatedAt: string;
+  skinSummary: SkinSummary | null;
 }
 
 export interface ApiError {
   code: string;
   message: string;
+}
+
+/** `POST /api/routine-history` istek/yanit sözleşmesi — backend'deki `routineHistory.types.ts` ile elle senkron. */
+export interface SaveRoutineHistoryRequest {
+  answers: QuestionnaireAnswers;
+  routine: RoutinePlan;
+}
+
+/** Bilerek minimal — gönderilen veriyi geri yankilamaz (bkz. ADR-011). */
+export interface SaveRoutineHistoryResponse {
+  id: string;
+  createdAt: string;
+}
+
+/** Günlük rutin tik atma sözleşmesi. `date` HER ZAMAN kullanıcının yerel gün anahtarı ("YYYY-MM-DD"), sunucunun UTC günü değil. */
+export interface RoutineProgress {
+  date: string;
+  completedStepIds: string[];
+}
+
+export interface ToggleRoutineProgressRequest {
+  date: string;
+  stepId: string;
 }

@@ -1,19 +1,13 @@
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Card, ScreenContainer, Text } from '../../../shared/components';
 import { routes } from '../../../navigation/routes';
-import { spacing, tabColors } from '../../../shared/theme';
+import { borderRadius, colors, spacing, tabColors } from '../../../shared/theme';
 import { useAuthStore } from '../../../store/useAuthStore';
 
-/**
- * DENEME: proje yöneticisinin isteğiyle eklenen soft pembe palette
- * (`tabColors`) burada ilk kez kullanılıyor — sadece bu ekranda. Beğenilirse
- * Ana Sayfa/Okumalar/Sonuçlarım'a da uygulanacak (bkz. theme/colors.ts).
- * Butonlar bilerek pembeye kaymadı — marka CTA dili (kahve aksan) tüm
- * uygulamada tek/tutarlı kalsın diye.
- */
 export function ProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -27,19 +21,28 @@ export function ProfileScreen() {
   };
 
   return (
-    <ScreenContainer tone="tabs">
+    <ScreenContainer>
       <Text variant="heading" style={styles.title}>
         Profilim
       </Text>
 
-      <Card tone="tabs" style={styles.card}>
+      <Card style={styles.card}>
         <View style={styles.avatar}>
-          {/* NOT: C09891 orta/açık tonlu — beyaz metin kontrastı zayıf kalıyordu,
-              bu yüzden burada `onAccent` KULLANILMADI, varsayılan koyu metin rengi
-              (textPrimary) okunabilirlik için daha doğru. */}
-          <Text variant="heading">{initial}</Text>
+          <Text variant="heading" style={styles.avatarInitial}>
+            {initial}
+          </Text>
         </View>
-        <Text variant="bodyMedium">{user?.email ?? 'Oturum bilgisi bulunamadı'}</Text>
+
+        <Text variant="bodyMedium" style={styles.email}>
+          {user?.email ?? 'Oturum bilgisi bulunamadı'}
+        </Text>
+
+        <View style={styles.statusBadge}>
+          <Ionicons name="checkmark-circle" size={14} color={tabColors.highlight} />
+          <Text variant="caption" style={styles.statusText}>
+            Hesap aktif
+          </Text>
+        </View>
       </Card>
 
       <View style={styles.spacer} />
@@ -56,15 +59,35 @@ const styles = StyleSheet.create({
   card: {
     alignItems: 'center',
     paddingVertical: spacing.xl,
+    gap: spacing.sm,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: tabColors.highlight,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: colors.background,
+    borderWidth: 2,
+    borderColor: tabColors.highlight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+  },
+  avatarInitial: {
+    color: colors.accent,
+  },
+  email: {
+    color: colors.textPrimary,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: tabColors.background,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.button,
+  },
+  statusText: {
+    color: colors.textPrimary,
   },
   spacer: {
     flex: 1,

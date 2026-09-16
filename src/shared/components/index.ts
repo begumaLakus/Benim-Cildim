@@ -1,5 +1,7 @@
 export { Text } from './Text';
 export type { AppTextProps, TextVariant } from './Text';
+export { AnalyzingOverlay } from './AnalyzingOverlay';
+export type { AnalyzingOverlayProps } from './AnalyzingOverlay';
 export { Button } from './Button';
 export type { ButtonProps, ButtonVariant } from './Button';
 export { Card } from './Card';
@@ -8,6 +10,8 @@ export { OptionCard } from './OptionCard';
 export type { OptionCardProps } from './OptionCard';
 export { ScreenContainer } from './ScreenContainer';
 export type { ScreenContainerProps } from './ScreenContainer';
+export { SegmentedControl } from './SegmentedControl';
+export type { SegmentedControlOption, SegmentedControlProps } from './SegmentedControl';
 export { TextField } from './TextField';
 export type { TextFieldProps } from './TextField';
 export { RoutineStepRow } from './RoutineStepRow';

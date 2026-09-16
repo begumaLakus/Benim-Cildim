@@ -16,12 +16,6 @@ export interface QuestionStepLayoutProps {
   onCta: () => void;
 }
 
-/**
- * "Tek soru, tek ekran" akışındaki her adımın ortak iskeleti: geri +
- * ilerleme çubuğu, başlık/alt başlık, soru içeriği (children) ve devam
- * butonu. Mevcut anket ekranının görsel dilini (OptionCard, boşluklar,
- * tipografi) birebir korur — sadece tek soruya böler.
- */
 export function QuestionStepLayout({
   stepNumber,
   totalSteps,

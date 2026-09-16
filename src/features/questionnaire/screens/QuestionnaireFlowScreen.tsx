@@ -10,13 +10,7 @@ import { GenderStep } from '../steps/GenderStep';
 import { SensitivitiesStep } from '../steps/SensitivitiesStep';
 import { SkinTypeStep } from '../steps/SkinTypeStep';
 
-/**
- * Adım sırası — kilitli akışın sıralamasını (yaş -> cinsiyet -> [kamera] ->
- * kalan anket soruları) izler. Kamera, cinsiyetten hemen sonra ve kalan
- * cilt sorularından önce yerleştirildi: kilitli brief'teki "cinsiyet
- * seçimi -> fotoğraf çekimi -> anket" sırasını korur, en donanım-yoğun
- * adımı akışın başında bitirir.
- */
+/** Adım sırası: yaş -> cinsiyet -> kamera -> kalan anket soruları. */
 const STEP_ORDER = [
   'ageRange',
   'gender',
@@ -29,12 +23,7 @@ const STEP_ORDER = [
 
 type StepId = (typeof STEP_ORDER)[number];
 
-/**
- * "Tek soru, tek ekran" anket sihirbazı. Her adım kendi route'una sahip
- * değildir — bu ekran adım index'ini kendi içinde tutar, geri tuşu ve
- * ilerleme çubuğu tek bir yerden yönetilir. Son adımda (sensitivities)
- * "Rutinimi Oluştur, Sonucu Göster" ile bekleme ekranına geçilir.
- */
+/** "Tek soru, tek ekran" anket sihirbazı — adım index'ini kendi içinde tutar, ayrı route'lar yok. */
 export function QuestionnaireFlowScreen() {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);

@@ -1,12 +1,4 @@
-/**
- * Anket akışı tek bir "sihirbaz" ekranında (questionnaireFlow) adım adım
- * ilerler — her soru kendi route'una sahip değildir, akış kendi içindeki
- * adım index'ini yönetir (bkz. QuestionnaireFlowScreen). Bu sayede geri tuşu
- * ve ilerleme çubuğu tek bir yerden tutarlı yönetilir.
- *
- * `(tabs)` grubu URL'de görünmez (Expo Router grup klasörü kuralı) — bu
- * yüzden `tabsHome` doğrudan `/home`'a işaret eder.
- */
+/** `(tabs)` grubu URL'de görünmez (Expo Router grup klasörü kuralı) — `tabsHome` doğrudan `/home`'a işaret eder. */
 export const routes = {
   onboardingWelcome: '/onboarding',
   authSignUp: '/auth/sign-up',

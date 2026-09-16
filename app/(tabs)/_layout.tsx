@@ -12,11 +12,7 @@ const TAB_ICONS: Record<string, IoniconsIconName> = {
   profile: 'person-outline',
 };
 
-/**
- * Auth sonrasi ana uygulama iskeleti (ADR-009, madde 4) — onboarding/anket/
- * auth stack'inden AYRI bir navigasyon koku. 4 sekme: Ana Sayfa/Rutinim
- * (varsayilan), Okumalar, Test Sonuclarim, Profilim.
- */
+/** Auth sonrasi ana uygulama iskeleti — onboarding/anket/auth stack'inden AYRI navigasyon koku. */
 export default function TabsLayout() {
   return (
     <Tabs

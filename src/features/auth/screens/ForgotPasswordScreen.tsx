@@ -8,9 +8,7 @@ import { validateEmail } from '../utils/validation';
 
 /**
  * Backend'de şifre sıfırlama ucu henüz yok — bu ekran şimdilik sadece
- * e-postayı doğruluyor ve "gönderildi" mesajı gösteriyor. Gerçek e-posta
- * gönderimi (örn. Resend/SendGrid ile) ayrı bir iş paketi; auth'un temel
- * akışını (kayıt/giriş) bloklamaması için bilerek bu ekrana ertelendi.
+ * e-postayı doğruluyor
  */
 export function ForgotPasswordScreen() {
   const router = useRouter();

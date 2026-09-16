@@ -7,14 +7,7 @@ import { spacing } from '../../../shared/theme';
 import { routes } from '../../../navigation/routes';
 import { useOnboardingStore } from '../../../store/useOnboardingStore';
 
-/**
- * NOT (ADR-009): "Rutinimi Kaydet ve Devam Et" auth kapısının tek girişidir.
- * Backend'de henüz bir `RoutineHistory` yazma ucu yok (bkz. ADR-009, madde 7)
- * — bu yüzden şu an hesap oluşturulduğunda öneri sadece bu oturumdaki
- * Zustand store'da taşınıyor, uygulama kapanıp açılırsa kaybolur. Bu uç
- * eklenince burada (ve SignUpScreen'de) rutini backend'e POST eden bir
- * çağrı eklenecek.
- */
+/** "Rutinimi Kaydet ve Devam Et" auth kapısının tek girişidir. */
 export function ResultsScreen() {
   const router = useRouter();
   const recommendation = useOnboardingStore((state) => state.recommendation);

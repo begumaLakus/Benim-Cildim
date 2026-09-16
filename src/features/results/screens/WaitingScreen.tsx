@@ -1,34 +1,31 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
-import { ScreenContainer, Text } from '../../../shared/components';
-import { colors, spacing } from '../../../shared/theme';
-import { routes } from '../../../navigation/routes';
+import { ResultsScreen } from './ResultsScreen';
+import { AnalyzingOverlay } from '../../../shared/components';
 import { deleteLocalPhoto, mockSubmitOnboarding } from '../../../services';
+import { routes } from '../../../navigation/routes';
 import { CAMERA_ANGLES, SubmitOnboardingRequest } from '../../../types';
 import { useOnboardingStore } from '../../../store/useOnboardingStore';
 
-/**
- * Rutin dinamik olarak "belirleniyor" hissi vermesi için sırayla değişen
- * durum mesajları — gerçek ilerlemeyi temsil etmez (Faz 1'de tek bir mock
- * çağrısı var), yalnızca sonucun adım adım oluşturulduğu izlenimini verir.
- */
+/** Dönen durum mesajları — mekanizmayı olduğu gibi anlatır, "yapay zeka" gibi yanlış bir iddiada bulunmaz. */
 const STATUS_MESSAGES = [
   'Fotoğrafların değerlendiriliyor',
-  'Cilt tipin analiz ediliyor',
-  'Cevapların eşleştiriliyor',
+  'Cilt tipin eşleştiriliyor',
+  'Aktif madde uyumu kontrol ediliyor',
   'Sana özel rutin oluşturuluyor',
 ];
 
-const STATUS_INTERVAL_MS = 1400;
-
 /**
- * Anket + fotoğraflar gönderildikten sonraki bekleme ekranı.
+ * Anket + fotoğraflar gönderildikten sonraki geçiş ekranı ("Analiz Ekranı").
  *
- * GEÇİCİ: Gerçek Express backend'i hazır olana kadar `mockSubmitOnboarding`
- * kullanılıyor — backend hazır olduğunda `services/api.ts` içindeki gerçek
- * `submitOnboarding` ile değiştirilecek (aynı request/response sözleşmesi).
+ * `ResultsScreen`, rutin hazır olur olmaz bu bileşenin İÇİNDE render edilir
+ * (henüz görünmez — `AnalyzingOverlay` onu örtüyor); köpük kalkınca zaten
+ * hazır olan içerik görünür, ancak ONDAN SONRA route değişir. Böylece köpük
+ * açılırken görünenle bir sonraki route'ta görünen birebir aynı olur.
+ *
+ * GEÇİCİ: gerçek backend hazır olana kadar `mockSubmitOnboarding` kullanılıyor.
  */
 export function WaitingScreen() {
   const router = useRouter();
@@ -39,14 +36,7 @@ export function WaitingScreen() {
   const photos = useOnboardingStore((state) => state.photos);
   const setRecommendation = useOnboardingStore((state) => state.setRecommendation);
   const resetPhotos = useOnboardingStore((state) => state.resetPhotos);
-  const [statusIndex, setStatusIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStatusIndex((index) => (index + 1) % STATUS_MESSAGES.length);
-    }, STATUS_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, []);
+  const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
     if (hasStarted.current) return;
@@ -75,39 +65,30 @@ export function WaitingScreen() {
       );
       resetPhotos();
 
-      router.replace(routes.results);
+      setDataReady(true);
     };
 
     run();
-  }, [answers, gender, photos, photoConsentGiven, resetPhotos, router, setRecommendation]);
+  }, [answers, gender, photos, photoConsentGiven, resetPhotos, setRecommendation]);
+
+  const handleOverlayFinished = useCallback(() => {
+    router.replace(routes.results);
+  }, [router]);
 
   return (
-    <ScreenContainer>
-      <View style={styles.content}>
-        <ActivityIndicator size="large" color={colors.accent} />
-        <Text variant="heading" style={styles.title}>
-          Rutinin hazırlanıyor
-        </Text>
-        <Text variant="body" secondary style={styles.subtitle}>
-          {STATUS_MESSAGES[statusIndex]}…
-        </Text>
-      </View>
-    </ScreenContainer>
+    <View style={styles.root}>
+      {dataReady ? <ResultsScreen /> : null}
+      <AnalyzingOverlay
+        ready={dataReady}
+        statusMessages={STATUS_MESSAGES}
+        onFinished={handleOverlayFinished}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
+  root: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  title: {
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  subtitle: {
-    textAlign: 'center',
   },
 });

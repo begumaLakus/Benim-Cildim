@@ -320,3 +320,454 @@ OLARAK bundan etkilenmiyor — kullanıcı o kısmın değişmesini istemedi.
   Okumalar ve Test Sonuçlarım ekranlarına da aynı `tone="tabs"` ile
   genişletilecek; tab bar'ın kendisi (`app/(tabs)/_layout.tsx`) henüz
   değiştirilmedi.
+
+---
+
+## ADR-011: Rutin geçmişi yazma ucu (`POST /api/routine-history`)
+
+**Durum:** Kabul edildi
+
+**Bağlam:** ADR-009 madde 5 ve 7'de, kullanıcı hesaba bağlandığı andan
+itibaren anket cevaplarının/rutin önerisinin backend'de (`RoutineHistory`
+tablosu) saklanacağı kararlaştırılmıştı. Tablo (`backend/prisma/
+schema.prisma`) zaten vardı ama yazma ucu hiç eklenmemişti — bu ADR o
+boşluğu kapatıyor.
+
+**Karar:**
+
+- `POST /api/routine-history`, `requireAuth` middleware'i arkasında
+  (`backend/src/middleware/requireAuth.ts`, JWT zorunlu) — token'sız istek
+  401 döner.
+- İstek gövdesi: `{ answers: QuestionnaireAnswers, routine: RoutinePlan }`.
+  RN tarafındaki (`src/types/domain.ts`, `src/types/api.ts`) sözleşmeyle
+  birebir eşleşecek şekilde backend'de elle senkron tutulan karşılığı
+  `backend/src/types/routineHistory.types.ts`'te (ADR-009 madde 6'daki
+  "RN app ile backend ayrı paket, tip paylaşılamıyor" notu, `auth.types.ts`
+  ile aynı desen). `gender` bilerek gövdede yok — `RoutineHistory` şeması
+  sadece `answersJson`/`routineJson` tutuyor; şemaya yeni alan eklemek ayrı
+  bir karar olurdu, bu ADR'nin kapsamı dışında bırakıldı.
+- Gövde `zod` ile doğrulanır — `auth.controller.ts`'teki desenle aynı
+  (`ZodError` -> `{ code: 'VALIDATION_ERROR', message }`, 400). Bu ikisi
+  arasında tekrar etmesin diye ortak `sendZodError` yardımcı fonksiyonu
+  `backend/src/utils/zodError.ts`'e çıkarıldı; `auth.controller.ts` da bu
+  ortak fonksiyona geçirildi.
+- Başarılı yanıt (201) bilerek minimal: `{ id, createdAt }` — gönderilen
+  veriyi geri yankılamaz. "Test Sonuçlarım" sekmesinin listeleyeceği okuma
+  ucu (`GET /api/routine-history`) bu ADR'nin kapsamı dışında, ayrı bir iş
+  paketi (ADR-009 madde 7).
+- `userId` yabancı anahtar kısıtlaması başarısız olursa (Prisma `P2003` —
+  token geçerli ama kullanıcı artık veritabanında yok, örn. hesap silinmiş)
+  genel hata işleyicisinin (500) yerine açıkça 401 döner.
+
+**Güncelleme — RN entegrasyonu tamamlandı:** İlk yazıldığında bu ADR
+yalnızca backend ucunu kapsıyordu; RN tarafı ayrıca bağlandı. Ekran
+seviyesinde (`ResultsScreen`/`SignUpScreen`) HİÇBİR değişiklik gerekmedi —
+senkronizasyon `useAuthStore.ts`'teki `signUp`/`login` action'larının
+içine (`syncGuestRoutineIfPresent`) eklendi: token set edildikten hemen
+sonra, `useOnboardingStore`'da bekleyen bir `recommendation` varsa
+`saveRoutineHistory` (`src/services/api.ts`) ile backend'e yazılır. Bu
+sayede hem "Rutinimi Kaydet ve Devam Et" (sign-up) hem de sonuç
+ekranındaki "Zaten hesabım var" (login) yolu tek yerden kapsanıyor —
+her ikisi de aynı `useAuthStore` action'larını çağırıyor.
+
+- `src/services/httpClient.ts` -> `postJson` opsiyonel bir `token`
+  parametresi aldı (`Authorization: Bearer` başlığı) — auth uçları bunu
+  kullanmıyor, yalnızca `requireAuth` arkasındaki uçlar için.
+- Yazma best-effort: ağ hatası/backend kapalıysa sessizce yutulur,
+  kullanıcıyı giriş/kayıttan sonra uygulamaya ulaşmaktan alıkoymaz.
+- `useOnboardingStore`'a `recommendationSynced` bayrağı eklendi — aynı
+  oturumda birden fazla auth olayının (örn. çıkış + tekrar giriş) aynı
+  öneriyi backend'e tekrar tekrar yazmasını engeller; yeni bir
+  `setRecommendation` çağrısı (yeni anket turu) bayrağı otomatik
+  sıfırlar.
+
+**Ek düzeltme (aynı test turunda bulundu):** `POST /api/routine-history`'yi
+elle test ederken (bozuk bir JSON gövdesiyle) fark edildi — `express.json()`
+(body-parser) geçersiz bir JSON gövdesi aldığında hata, route/controller'a
+hiç ulaşmadan doğrudan Express'in genel hata zincirine düşüyordu; bu da
+istemciye (RN tarafı) hangi uç olursa olsun anlamsız bir `500 INTERNAL_ERROR`
+olarak yansıyordu — oysa bu tamamen istemci kaynaklı, düzeltilebilir bir
+`400` durumu. `backend/src/middleware/errorHandler.ts`'e body-parser'ın JSON
+parse hatasını (`type === 'entity.parse.failed'`) ayırt edip `{ code:
+'INVALID_JSON', message }` ile 400 döndüren bir kontrol eklendi — tüm
+uçları (auth dahil) kapsar, bu ADR'ye özgü değil.
+
+---
+
+## ADR-012: Rutin geçmişi okuma ucu (`GET /api/routine-history/latest`) ve Ana Sayfa'nın gerçek veriye bağlanması
+
+**Durum:** Kabul edildi
+
+**Bağlam:** ADR-011 sadece yazma ucunu ekliyordu. Bu arada gerçek bir hata
+tespit edildi: `HomeScreen`, kullanıcının rutinini yalnızca o oturumda
+(bellek-içi) `useOnboardingStore`'dan okuyordu — geçerli bir oturum
+token'ıyla doğrudan `(tabs)/home`'a düşen bir kullanıcı (uygulamayı kapatıp
+açtığında, ya da çıkış yapıp tekrar giriş yaptığında) rutinini "kaybolmuş"
+görüyordu, çünkü o bellek hiçbir zaman yeniden doldurulmuyordu.
+
+**Karar:**
+
+- `GET /api/routine-history/latest`, `requireAuth` arkasında — kullanıcının
+  en son kaydettiği `RoutineHistory` satırını (`createdAt DESC`, ilk kayıt)
+  döner. Kayıt yoksa (yeni hesap, hiç anket tamamlanmamış) **404** döner —
+  bu bir hata değil, beklenen bir durumdur.
+- Yanıt şeması bilinçli olarak RN tarafındaki `RoutineRecommendationResponse`
+  (`src/types/api.ts`) ile BİREBİR aynı (`routine`, `productSuggestion: null`,
+  `generatedAt`) — böylece `HomeScreen`, misafirken alınan bir öneriyle
+  backend'den çekilen bir öneriyi aynı store alanına (`recommendation`)
+  yazabiliyor, ayrı bir tip/dönüşüm gerekmiyor.
+- RN tarafı: `src/services/httpClient.ts`'e `getJson` eklendi — 404'ü özel
+  olarak `null` döner (hata fırlatmaz), diğer `ApiRequestError` durumlarıyla
+  karışmasın diye. `HomeScreen` artık mount olduğunda (token varsa) bu ucu
+  çağırıyor; yükleniyor durumu (`ActivityIndicator`) ve hata durumu
+  (`loadError`) eklendi. Ekranın render mantığı (rutini gösterme) değişmedi.
+- Backend'den başarıyla çekilen bir öneri, hemen `markRecommendationSynced()`
+  ile işaretlenir — bu kayıt zaten backend'de var, `useAuthStore.ts`'teki
+  `syncGuestRoutineIfPresent`'in onu tekrar `POST` ETMEMESİ için (bkz.
+  ADR-011 güncellemesi).
+
+**Ek düzeltme (bu ucu eklerken bulundu — genel, tüm backend'i kapsar):**
+Express 4.x, async route handler'larda `await` edilirken reddedilen
+hataları otomatik olarak `errorHandler`'a yönlendirmez; bu hatalar
+yakalanmamış bir "unhandled promise rejection" olarak kalır. Node 15+'ta
+(bu backend Node 24 ile çalışıyor) bu, istemcinin yanıt alamayıp sonsuza
+kadar beklemesiyle KALMAZ — sürecin çökmesine bile yol açabilir (varsayılan
+davranış: unhandled rejection → `process.exit`). Yeni bağımlılık eklemeden
+(`express-async-errors` yerine) `backend/src/utils/asyncHandler.ts` adında
+küçük, sıfır-bağımlılıklı bir sarmalayıcı eklendi ve TÜM async route
+controller'ları (`auth.routes.ts`, `routineHistory.routes.ts`) bununla
+kaydedildi — controller imzaları/mantığı değişmedi.
+
+**Güncelleme — pembenin kullanım yönü değişti (kenarlık/rozet vurgusu):**
+Kullanıcı geri bildirimi: `Profilim`'de denenen tam sayfa zemini + tam kart
+dolgusu, uygulamanın soft kahve/krem diliyle uyuşmuyordu, amatörce
+hissettiriyordu. Yön değişti — pembe artık zemin/kart dolgusu DEĞİL,
+yalnızca küçük, kasıtlı vurgu noktalarında kullanılıyor: seçim/onay
+öğelerinde kenarlık (örn. avatar çerçevesi) ve onay/durum ikonlarında (örn.
+"hesap aktif" rozetindeki `checkmark-circle` ikonu). `ProfileScreen` bu
+yeni yöne göre yeniden tasarlandı — sayfa zemini ve kart artık kilitli
+(ADR-003) krem/kahve palete geri döndü, `tabColors` sadece avatar
+çerçevesinde ve rozette kullanılıyor. Diğer 3 sekmeye (Ana Sayfa/Okumalar/
+Sonuçlarım) pembe zemin/kart uygulama planı bu kararla düşürüldü — ileride
+aynı "kenarlık/rozet" mantığıyla oralara da kasıtlı vurgu noktaları
+eklenebilir, ama tam sayfa/kart dolgusu olarak değil.
+
+## ADR-013: Anket sonrası "Analiz Ekranı" (köpük/baloncuk geçişi)
+
+**Durum:** Kabul edildi ve uygulandı
+
+**Bağlam:** Anket bitince (`WaitingScreen`) sonuç doğrudan gösteriliyordu —
+gerçek hesaplama (kural tabanlı eşleştirme, mock'ta 1800ms) zaten anlık
+olduğu için bu an jenerik bir döndürücüden ibaretti. Kullanıcı, cilt
+bakımı/temizlik metaforuyla örtüşen bir fikir önerdi: ekranı dolduran
+köpük/baloncuklar, sonunda köpüğün kaybolup altından sonucun çıkması —
+otomatik ya da kullanıcının baloncuklara dokunmasıyla.
+
+**Karar:**
+
+- **Etkileşim: hibrit.** Baloncuklar kendiliğinden dolar; kullanıcı isterse
+  dokunup "patlatarak" süreci hızlandırabilir (10 baloncuk patlatılınca
+  anında açılır) ama zorunlu değildir — veri hazır olur olmaz en az 2,2
+  saniye (`MIN_VISIBLE_MS`) sonra, en geç ~1,6 saniye daha (`AUTO_REVEAL_DELAY_MS`)
+  içinde otomatik açılır. Erişilebilirlik ("Hareketi Azalt" açık) ve
+  sabırsız kullanıcı senaryolarının ikisi de karşılanıyor.
+- **Renk: sadece krem + pembe, mevcut paletten.** Yeni bir renk ailesi
+  (örn. mavi) eklenmedi — baloncuklar `colors.surface` (krem) ve
+  `tabColors.highlight` (pembe, ~%25 oranında vurgu) kullanıyor, sheet
+  zemini `colors.background`. **Not — bu bir mimari sınır genişletmesi:**
+  `colors.ts`'teki not, pembenin SADECE auth-sonrası `(tabs)` alanında
+  kullanılacağını, anket/onboarding akışının BİLİNÇLİ OLARAK buna
+  dokunmadığını söylüyor. Analiz Ekranı `results/waiting` altında, yani
+  teknik olarak anket akışının bir parçası — kullanıcı bunu bilerek
+  onayladı (bkz. sohbet), ama ileride biri bu dosyayı okuyup "neden burada
+  pembe var" diye sorarsa diye burada açıkça not düşülüyor. Anket
+  ekranlarının kendisi (soru kartları, butonlar) hâlâ tamamen kilitli
+  5 renkli palette — yalnızca bu geçiş ekranı istisna.
+- **Dürüstlük kuralı:** Dönen durum yazıları ("cilt tipin eşleştiriliyor"
+  gibi) mekanizmayı olduğu gibi anlatıyor — kural tabanlı bir eşleştirme
+  bu; "yapay zeka analiz ediyor" gibi bir ifade BİLEREK kullanılmadı, çünkü
+  ileride bir güzellik merkezine satılacak bir üründe yanlış teknik iddia
+  güven sorunu yaratır.
+- **Yeni bağımlılık yok.** `react-native-reanimated` (4.5.1) ve RN'in kendi
+  `Pressable`'ı zaten kuruluydu ama daha önce hiç kullanılmıyordu — bu,
+  projede Reanimated'ın ilk gerçek kullanımı. `react-native-gesture-handler`
+  hiç dokunulmadı (basit `Pressable` yeterli oldu).
+- **Mimari:** Yeni paylaşılan bileşen `src/shared/components/AnalyzingOverlay.tsx`
+  — `ready`, `statusMessages`, `onFinished` prop'ları alıyor, tek başına bir
+  ekran değil. `WaitingScreen` artık veri hazır olur olmaz `ResultsScreen`'i
+  KENDİ İÇİNDE (henüz `results/waiting` route'undayken, overlay'in altında,
+  görünmeden) render ediyor; overlay köpüğü kaldırdığında kullanıcı zaten
+  hazır olan sonucu görüyor, `router.replace(routes.results)` ancak ONDAN
+  SONRA çağrılıyor — böylece route değişiminde göz kırpması olmuyor. Aynı
+  bileşen, Sonuçlarım'daki "Yeniden Analiz Başlat" akışı eklendiğinde
+  (bkz. uygulama haritası) oradan da çağrılabilir.
+- **Erişilebilirlik:** `AccessibilityInfo.isReduceMotionEnabled()` true ise
+  baloncuk animasyonu tamamen atlanıyor, yerine eski sade `ActivityIndicator`
+  - dönen metin gösteriliyor — süre sınırları (min/otomatik açılış) aynen
+    korunuyor.
+- **React Compiler notu:** `eslint-config-expo`'nun React Compiler kuralları
+  (`react-hooks/immutability`), Reanimated'ın "shared value" mutasyonunu
+  (`sharedValue.value = ...`) tanımıyor ve hatalı işaretliyor — bu,
+  Reanimated'ın resmi/kasıtlı API'si olduğu için tek satırlık, açıklamalı
+  bir `eslint-disable-next-line` ile susturuldu (sessizce değil, yorum
+  satırıyla).
+
+`npm run typecheck`, `npm run lint` ve `npm run format:check` (yeni/değişen
+iki dosya için) temiz. Gerçek görsel doğrulama (Expo Go) kullanıcı
+tarafından yapılacak — sandbox'ta canlı çalıştırılamıyor (bkz. ADR-007/012).
+
+---
+
+**Güncelleme — köpük yoğunluğu ve gerçekçiliği artırıldı:**
+Kullanıcı geri bildirimi: ilk sürüm (24 tek tip, düz renkli, geniş boşluklu
+baloncuk) "amatörce" durdu ve ekranı kaplamadı — bilinen sabun köpüğü
+hissi yoktu. `AnalyzingOverlay` iki katmana bölündü:
+
+- **Dip köpük** (20 adet, 90-220px, düşük opaklık, dokunulamaz) — ekranı
+  gerçekten KAPLAYAN, örtüşen bulanık kütle.
+- **Üst köpük** (64 adet, 12-46px, parlaklık noktalı + ince parlak kenarlı,
+  dokunulabilir) — "gerçek baloncuk" hissini ve tıklama etkileşimini veren
+  kısım; patlatma eşiği buna göre 20'ye çıkarıldı (~%31).
+
+Her baloncuk artık tek bir `presence` shared value ile hem belirip hem
+sürekli `breatheFloor`↔1 arasında rastgele periyotlarla "nefes alıyor" —
+"fokur fokur" sürekli hareket hissi buradan geliyor (ayrı bir parçacık
+üretme/yok etme sistemi kurulmadı, performans riski daha düşük ve statik
+olarak doğrulanması daha kolay). Parlaklık/kenar rengi yeni bir renk
+DEĞİL — `colors.background`'ın düşük alfalı hâli (bkz. `SHEEN_STRONG`/
+`SHEEN_SOFT` sabitleri). `typecheck`/`lint`/`format` yine temiz.
+
+## ADR-014: `react-native-worklets` sürüm uyuşmazlığı (uygulama hiç açılmıyordu)
+
+**Durum:** Kabul edildi ve düzeltildi
+
+**Bağlam:** ADR-013'teki Analiz Ekranı'nı Expo Go'da denerken uygulama HİÇ
+açılmadı — kök `app/_layout.tsx`'te `react-native-gesture-handler`'dan
+`GestureHandlerRootView` `undefined` geldi ("TypeError: undefined is not a
+function"), bu da kök layout'u ve dolayısıyla TÜM route'ları ("missing
+default export" uyarıları) çökertti. `app/_layout.tsx`'e o an hiç
+dokunulmamıştı — hata orada değildi.
+
+Kök neden: `package.json`'da `react-native-worklets` **`^0.12.1`** olarak
+sabitlenmişti, ama `react-native-reanimated@4.5.1`'in `peerDependencies`'i
+`react-native-worklets: "0.10.x"` istiyor (`node_modules/react-native-reanimated/package.json`).
+Expo SDK 57'nin kendi uyumluluk listesi de (`node_modules/expo/bundledNativeModules.json`)
+`0.10.1` bekliyor. Bu uyuşmazlık `package.json`'da BAŞINDAN BERİ vardı —
+ama Reanimated hiçbir yerde gerçekten kullanılmadığı için (worklet
+runtime'ı hiç tetiklenmediği için) tamamen sessiz/etkisizdi.
+`AnalyzingOverlay`, projede Reanimated'ın (`useSharedValue`,
+`useAnimatedStyle`) İLK gerçek kullanımı olunca worklet runtime'ı ilk kez
+gerçekten başlatıldı — 0.12.x native ABI'siyle Expo Go'nun içine gömülü
+0.10.x native koddaki karşılığı uyuşmadığı için worklets runtime'ının
+başlatılması başarısız oldu; `react-native-gesture-handler` da aynı
+worklets native modülünü paylaştığı için (yeni mimaride) o da bu
+başarısızlıktan etkilenip export'unu `undefined` bıraktı.
+
+**Karar:**
+
+- `react-native-worklets` `^0.12.1` → `^0.10.1` olarak düzeltildi (`npm
+install react-native-worklets@0.10.1`) — artık hem Reanimated'ın
+  `peerDependencies`'iyle hem Expo SDK 57'nin beklediğiyle birebir uyumlu.
+- Bu, Analiz Ekranı'nın NEDEN OLDUĞU bir hata değil — projede zaten var
+  olan, ama hiç tetiklenmemiş bir sürüm uyuşmazlığıydı. İlk gerçek
+  worklet kullanımı onu görünür kıldı.
+- **Sende yapman gereken:** `npm install`'ı tekrar çalıştırıp Metro
+  önbelleğini temizleyerek yeniden başlat (`npx expo start -c`) — sandbox
+  bu bağımlılığı kurabildi ama gerçek cihaz/Expo Go üzerinde canlı testi
+  hâlâ senin yapman gerekiyor (bkz. ADR-007).
+
+---
+
+## ADR-015: Rutinim ekranı yeniden yapılandırma (Sabah/Akşam segment, kart mimarisi, ürün slotu)
+
+**Durum:** Kabul edildi ve uygulandı
+
+**Bağlam:** Kullanıcı, Rutinim'in düz/statik dikey liste görünümünü, atomik
+bileşenlerle kurulmuş, B2B ürün entegrasyonuna hazır bir yapıya çevirecek
+detaylı bir teknik spesifikasyon verdi (renk kodları, komponent isimleri
+dahil). Spesifikasyonun İKİ noktası kilitli mimariyle çakışıyordu, ikisi de
+uygulamadan önce kullanıcıya soruldu ve netleştirildi:
+
+1. **Renk sistemi çakışması:** İstenen kart yüzeyi (`#FFFFFF` + `1px
+#EFEAE1` border) ve yeni bir pembe ton (`#E8C5B8`), ADR-003'ün düz/
+   gölgesiz/sınırsız kart kuralıyla ve ADR-010'un zaten kilitli iki pembe
+   tonuyla (`#F4DBD8`, `#C09891`) çakışıyordu. **Karar: mevcut palete sadık
+   kalındı** — kart yüzeyi `colors.surface` (#EFEAE1), vurgu rengi
+   `tabColors.highlight` (#C09891). ADR-003/ADR-010'a hiç dokunulmadı,
+   sadece LAYOUT yenilendi.
+2. **Cilt etiketi veri kaynağı:** İstenen "Karma / Nemsiz • Bariyer
+   Onarımı" tarzı etiket anket cevaplarından geliyor, ama `GET
+/api/routine-history/latest` bu cevapları dönmüyordu (ADR-12'de bilerek
+   minimal tutulmuştu) — eklenirse tekrar girişte kaybolurdu. **Karar:
+   backend'e bağlandı** (aşağıda, madde 5).
+
+**Karar (uygulama):**
+
+1. **Yeni atomik bileşenler:**
+   - `src/shared/components/SegmentedControl.tsx` — jenerik (`T extends
+string`) iki+ seçenekli segment kontrolü. Aktif segment
+     `colors.accent` dolgu + `colors.textOnAccent` metin; pasif segment
+     `colors.textSecondary`. İlk kullanım yeri Sabah/Akşam ama başka
+     ekranlar da kullanabilir.
+   - `src/features/home/components/RoutineCard.tsx` — tek rutin adımı
+     kartı: sıra/kategori satırı, aktif madde (ana odak), talimat, sağda
+     yuvarlak tamamlanma checkbox'ı (`tabColors.highlight` border/dolgu).
+     Eski `RoutineStepRow` (hâlâ `ResultsScreen`'de kullanılıyor) BİLEREK
+     değiştirilmedi — anket bitişindeki ilk önizlemede "bugün işaretleme"
+     kavramı yok.
+   - `src/features/home/components/ProductSlot.tsx` — `AffiliatedProduct
+{ id, name, brand, imageUrl }` tipini tanımlar. `RoutineCard`'ın
+     opsiyonel `affiliatedProduct` prop'u dolarsa kartın altında açılır.
+     Şu an HİÇBİR yerden gerçek veri beslenmiyor (`HomeScreen` her zaman
+     `undefined` geçiyor) — Faz 3'teki güzellik merkezi kataloğu bekliyor
+     (bkz. uygulama haritası, ADR-004'teki `productSuggestion` sözleşmesi).
+   - `src/features/home/utils/skinSummary.ts` — `formatSkinSummary`, ham
+     `SkinSummary` enum'larını Türkçe etikete çevirir (örn. "Karma Cilt •
+     Kızarıklık, Donukluk"). Formatlama BİLEREK RN tarafında — backend
+     lokalizasyon bilmiyor, sadece veri taşıyor.
+2. **`HomeScreen`:** Dikey sabah/akşam yığılması kaldırıldı,
+   `SegmentedControl` ile `activeSlot` state'ine göre tek liste
+   gösteriliyor. Günlük "tamamlandı" işaretleri şimdilik SADECE
+   `useState<Set<string>>` ile bu oturumda tutuluyor — kalıcı hâle
+   getirmek (backend `RoutineProgress` modeli) uygulama haritasındaki
+   "Rutinim'e günlük işaretleme" adımının kendisi, bu değişikliğin
+   kapsamında değil, bilerek ertelendi.
+3. **Atlanan madde:** Spesifikasyon "sağ üstteki parlak mavi ayarlar
+   butonunu kaldır" diyordu — uygulamada böyle bir buton (ya da genel
+   olarak bir ayarlar ekranı) hiç yok, muhtemelen farklı bir referanstan
+   geliyordu. Var olmayan bir şeyi "kaldırmak" anlamsız olduğu için, ve
+   gidecek bir yeri olmayan süs bir ikon eklemek kötü pratik olacağı için
+   bu madde atlandı.
+4. **Yazı tipi notu:** Aktif madde metni için "Inter-SemiBold" istenmişti;
+   projede sadece Inter Regular/Medium yüklü (`app/_layout.tsx`'teki
+   `useFonts`). Yeni bir ağırlık indirmek yerine mevcut en kalın seçenek
+   (`fontFamily.bodyMedium`, Inter Medium) kullanıldı — istenirse SemiBold
+   eklemek küçük, düşük riskli bir ek iş.
+5. **Backend genişletmesi:** `GET /api/routine-history/latest` yanıtına
+   `skinSummary: { skinType, concerns } | null` eklendi
+   (`backend/src/types/routineHistory.types.ts`,
+   `routineHistory.controller.ts`) — zaten DB'de saklı `answersJson`'dan
+   türetiliyor, yeni bir soru/tablo YOK. RN tarafında
+   `RoutineRecommendationResponse`'a aynı alan eklendi; misafir akışında
+   (`mockApi.ts`) da gerçek `request.answers`'tan dolduruluyor, sabit
+   değer değil — böylece HomeScreen ikisini de aynı alan üzerinden okuyor.
+
+`npm run typecheck`/`lint`/`format:check` (RN) ve `npx tsc --noEmit`
+(backend, sadece önceden bilinen `jwt.ts` hatası dışında) temiz. Görsel
+doğrulama yine kullanıcıda — sandbox'ta canlı çalıştırılamıyor.
+
+---
+
+## ADR-016: Rutinim — Kalıcı Günlük İlerleme, İlerleme Çubuğu ve "Neden Önerildi" Açıklaması
+
+**Durum:** Kabul edildi
+**Bağlam:** ADR-015'te Rutinim ekranı Sabah/Akşam Segmented Control +
+`RoutineCard` yapısına geçti ama günlük "tamamlandı" işaretleri BİLEREK
+sadece oturum-içi (`useState<Set<string>>`) bırakılmıştı. Kullanıcı
+canlı testte fark etti: uygulamayı kapatıp yeniden açınca (yeni bir
+oturum) işaretlediği adımlar sıfırlanıyordu — bu, günlük bir alışkanlık
+takip özelliği için kabul edilemez, çünkü kullanıcı "bugün zaten
+yaptım" bilgisini kaybediyor. Ayrıca kullanıcı iki ek istek belirtti:
+(1) aktif sekmede kaç adımın tamamlandığını gösteren bir ilerleme
+göstergesi + tamamlanınca bir kutlama mesajı, (2) her adımın altında
+neden önerildiğini kısaca açıklayan bir satır.
+
+**Karar:**
+
+1. **Backend — `RoutineProgress` modeli (bkz. `backend/prisma/schema.prisma`):**
+
+   ```prisma
+   model RoutineProgress {
+     id          String   @id @default(cuid())
+     userId      String
+     user        User     @relation(fields: [userId], references: [id])
+     date        String
+     stepId      String
+     completedAt DateTime @default(now())
+
+     @@unique([userId, date, stepId])
+   }
+   ```
+   - `date`, sunucunun UTC gününü DEĞİL, RN tarafının hesapladığı
+     kullanıcının YEREL gün anahtarını ("YYYY-MM-DD",
+     `src/features/home/utils/date.ts` → `getLocalDateKey`) taşıyor.
+     Sunucu UTC günü kullansaydı, gece yarısına yakın (örn. TR saatiyle
+     00:30, UTC'de hâlâ önceki gün) bir kullanıcının işaretlemesi yanlış
+     güne yazılabilirdi.
+   - `stepId`, rutin JSON'u içindeki adım id'sine referans veriyor;
+     ayrı bir `RoutineStep` tablosu olmadığı için gerçek bir foreign key
+     DEĞİL, eşleme amaçlı bir string.
+   - `@@unique([userId, date, stepId])`, aynı gün+adım için ikinci bir
+     satır oluşmasını (çift POST/toggle race'i) engelliyor.
+   - Yeni uçlar: `GET /api/routine-progress?date=YYYY-MM-DD` (o günün
+     işaretli adım id'lerini döner; hiç işaretleme yoksa 404 DEĞİL, boş
+     dizi — "henüz hiçbir şey yok" normal bir durum) ve
+     `POST /api/routine-progress/toggle` (`{date, stepId}` — işaretler/
+     kaldırır, backend'in GÜNCEL TAM listesini döner).
+   - Dosyalar: `backend/src/types/routineProgress.types.ts`,
+     `backend/src/controllers/routineProgress.controller.ts`,
+     `backend/src/routes/routineProgress.routes.ts`, `app.ts`'e mount.
+
+   **ÖNEMLİ — sandbox kısıtlaması:** Bu oturumda çalıştığım ortamın ağ
+   erişimi `binaries.prisma.sh`'ı engelliyor, bu yüzden `npx prisma
+generate` (ve migration) burada ÇALIŞTIRILAMADI —
+   `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` ile bile 403 Forbidden.
+   Kontrolcü kodu, Prisma'nın bilinen API kurallarına (özellikle bileşik
+   `@@unique` için otomatik oluşan `userId_date_stepId` anahtar adı)
+   göre elle yazıldı ve `npx tsc --noEmit` ile doğrulandı — tek kalan
+   hatalar beklenen `Property 'routineProgress' does not exist`
+   (istemci yeniden üretilmeden çözülemez) ve önceden var olan, bu
+   değişiklikle ilgisiz `jwt.ts` hataları. **Bu değişikliğin backend'de
+   çalışabilmesi için `backend/` içinde şunu çalıştırman gerekiyor:**
+
+   ```
+   npx prisma migrate dev --name add_routine_progress
+   ```
+
+   (bu hem migration'ı oluşturur hem Prisma Client'ı yeniden üretir),
+   ardından backend dev sunucusunu yeniden başlat.
+
+2. **RN — kalıcı ilerleme:** `HomeScreen`, eskiden sadece oturum-içi
+   `Set<string>` kullanıyordu. Artık:
+   - Rutin yüklendiğinde `getRoutineProgress(getLocalDateKey(), token)`
+     çağrılıp `completedStepIds` sunucudan dolduruluyor.
+   - Bir adıma dokunulunca `toggleRoutineProgress({date, stepId}, token)`
+     çağrılıyor; iyimser (optimistic) güncelleme YAPILMIYOR — checkbox,
+     backend'in döndürdüğü güncel tam listeyle eşitleniyor, böylece çift
+     dokunuş ya da başarısız bir istek arayüzü sunucudaki gerçek
+     durumdan asla saptırmıyor. Bir istek sırasında aynı adıma tekrar
+     dokunmayı engellemek için `isTogglingStepId` state'i eklendi.
+   - Yeni dosyalar/değişiklikler: `src/types/api.ts` (`RoutineProgress`,
+     `ToggleRoutineProgressRequest`), `src/services/api.ts`
+     (`getRoutineProgress`, `toggleRoutineProgress`),
+     `src/services/index.ts` (export'lar).
+
+3. **RN — ilerleme çubuğu (`RoutineProgressBar.tsx`, yeni):** Aktif
+   sekmedeki tamamlanan/toplam adım sayısını ("X/Y adım tamamlandı") ve
+   ince bir dolum çubuğunu gösteriyor; `completed === total` olduğunda
+   altına bir kutlama satırı ("Bugünkü {sabah/akşam} rutinini
+   tamamladın") ekleniyor. Renkler mevcut kilitli palet
+   (`tabColors.highlight` dolum, `colors.surface` track) — yeni renk
+   eklenmedi.
+
+4. **RN — "neden önerildi" açıklaması (`utils/routineReason.ts`, yeni):**
+   `formatRoutineReason(productCategory, skinSummary)`, elde zaten olan
+   `skinSummary` (anket cevaplarından, bkz. ADR-015 madde 5) kullanarak
+   BİLİNEN 4 kategori (Temizleyici, Serum, Güneş koruyucu, Nemlendirici)
+   için kural tabanlı bir Türkçe cümle üretiyor (örn. "Karma cildinde
+   akne görünümünü azaltmaya yardımcı olur."). Bilinmeyen bir kategori
+   ya da eksik `skinType` durumunda `null` döner — uydurma bir cümle
+   göstermek yerine satırı gizlemek tercih edildi. `RoutineCard`'a yeni
+   `reason?: string | null` prop'u eklendi; doluysa adımın altında bir
+   `sparkles-outline` ikonu + `colors.textSecondary` renkli küçük bir
+   metin olarak render ediliyor. BİLEREK "yapay zeka" gibi bir iddiada
+   bulunulmuyor — bu, kural tabanlı basit bir eşleştirme (bkz. ADR-013'te
+   aynı dürüstlük ilkesi). Gerçek fotoğraf-analizi tabanlı kişiselleştirme
+   Faz 2'nin kapsamında.
+
+**Sonuç:** `npm run typecheck`/`lint`/`prettier --write` (RN, dokunulan
+tüm dosyalarda) ve `npx tsc --noEmit` (backend, sadece yukarıda anlatılan
+beklenen `routineProgress` hataları + önceden var olan ilgisiz `jwt.ts`
+hataları) temiz. Görsel doğrulama ve migration'ın gerçekten çalıştığının
+teyidi kullanıcıda — sandbox'ta ne canlı çalıştırılabiliyor ne de Prisma
+Client yeniden üretilebiliyor.

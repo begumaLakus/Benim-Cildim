@@ -20,8 +20,7 @@
           "cameraPermission": "Cilt bakım önerisi için kayıt amaçlı bir fotoğraf çekebilmemiz üzere kameraya erişim izni gerekiyor."
         }
       ],
-      "expo-font",
-      "expo-secure-store"
+      "expo-font"
     ],
     "ios": {
       "supportsTablet": true

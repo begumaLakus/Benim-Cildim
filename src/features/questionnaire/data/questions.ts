@@ -17,12 +17,7 @@ export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: 'unspecified', label: 'Belirtmek istemiyorum' },
 ];
 
-/**
- * Cilt tipi ve cilt endişeleri sorularına ikon eklendi — anketteki en görsel
- * anlatılabilir iki soru bu ikisi. Diğer sorular (yaş, cinsiyet, evet/hayır
- * soruları) bilinçli olarak ikonsuz bırakıldı; tüm sorulara ikon eklemek
- * anketi gereksiz kalabalıklaştırırdı.
- */
+/** Sadece cilt tipi/endişe sorularına ikon eklendi — diğerlerine eklemek anketi kalabalıklaştırırdı. */
 export const SKIN_TYPE_OPTIONS: { value: SkinType; label: string; icon: IoniconsIconName }[] = [
   { value: 'dry', label: 'Kuru', icon: 'leaf-outline' },
   { value: 'oily', label: 'Yağlı', icon: 'water-outline' },

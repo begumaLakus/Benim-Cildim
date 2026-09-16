@@ -4,6 +4,7 @@ import { z, ZodError } from 'zod';
 import { prisma } from '../db';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { signAuthToken } from '../utils/jwt';
+import { sendZodError } from '../utils/zodError';
 import { AuthResponseBody } from '../types/auth.types';
 
 const credentialsSchema = z.object({
@@ -13,14 +14,6 @@ const credentialsSchema = z.object({
   // taban cizgisi olsun diye 8 karakter zorunlu tutuluyor.
   password: z.string().min(8, 'Sifre en az 8 karakter olmali.'),
 });
-
-function sendZodError(res: Response, error: ZodError): void {
-  const firstIssue = error.issues[0];
-  res.status(400).json({
-    code: 'VALIDATION_ERROR',
-    message: firstIssue?.message ?? 'Gecersiz istek.',
-  });
-}
 
 export async function signUp(req: Request, res: Response): Promise<void> {
   let credentials;

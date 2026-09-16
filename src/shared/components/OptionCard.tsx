@@ -10,24 +10,11 @@ export interface OptionCardProps {
   label: string;
   selected: boolean;
   onPress: () => void;
-  /**
-   * Bazı sorularda (örn. cilt tipi, cilt endişeleri) seçeneği görsel olarak
-   * güçlendirmek için opsiyonel bir ikon — tüm sorularda değil, sadece
-   * görselin gerçekten anlam kattığı birkaçında kullanılıyor. Tasarım
-   * sisteminin kilitli renk paletiyle uyumlu kalması için ikon her zaman
-   * metinle aynı rengi kullanır (referans aldığımız örnekteki gibi renkli/
-   * çok renkli bir ikon seti değil) — seçiliyken beyaz, değilken ana metin
-   * rengi.
-   */
+
   icon?: IoniconsIconName;
   testID?: string;
 }
 
-/**
- * Anket / seçim ekranlarındaki tekil seçenek satırı.
- * Tasarım sistemi kuralı: yükseklik 48-52px, borderRadius 16, düz kart —
- * gölge veya organik süsleme yok. Seçiliyken aksan zemin + beyaz metin.
- */
 export function OptionCard({ label, selected, onPress, icon, testID }: OptionCardProps) {
   return (
     <Pressable

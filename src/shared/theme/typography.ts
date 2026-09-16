@@ -1,10 +1,4 @@
-/**
- * Font aileleri ve tipografi ölçeği.
- *
- * Kural: Cormorant Garamond SADECE başlıklarda kullanılır.
- * Tıklanabilir alanların (buton, form, seçenek kartı, tab) içine
- * kesinlikle Cormorant Garamond yazılmaz — bu alanlar her zaman Inter kullanır.
- */
+/** Font aileleri ve tipografi ölçeği. Cormorant Garamond SADECE başlıklarda — tıklanabilir alanlar hep Inter kullanır. */
 export const fontFamily = {
   headingSemiBold: 'CormorantGaramond_600SemiBold',
   headingMedium: 'CormorantGaramond_500Medium',

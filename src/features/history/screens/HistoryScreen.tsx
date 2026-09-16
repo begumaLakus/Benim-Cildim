@@ -4,11 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { ScreenContainer, Text } from '../../../shared/components';
 import { spacing } from '../../../shared/theme';
 
-/**
- * YER TUTUCU: gecmis anket/rutin sonuclarinin listesi. Backend'de
- * `RoutineHistory` modeli var (bkz. backend/prisma/schema.prisma) ama okuma
- * ucu (GET /api/routine-history) henuz yazilmadi — ADR-009, madde 7.
- */
+/** YER TUTUCU: gecmis anket/rutin sonuclarinin liste ucu eklenince burada listelenecek. */
 export function HistoryScreen() {
   return (
     <ScreenContainer>

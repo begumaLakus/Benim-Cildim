@@ -2,6 +2,8 @@ import cors from 'cors';
 import express, { Express } from 'express';
 
 import { authRouter } from './routes/auth.routes';
+import { routineHistoryRouter } from './routes/routineHistory.routes';
+import { routineProgressRouter } from './routes/routineProgress.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 export function createApp(): Express {
@@ -15,6 +17,8 @@ export function createApp(): Express {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/routine-history', routineHistoryRouter);
+  app.use('/api/routine-progress', routineProgressRouter);
 
   // Bilinmeyen route — RN tarafinda 404'u ayirt edebilmek icin JSON doner.
   app.use((_req, res) => {

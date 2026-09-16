@@ -3,14 +3,7 @@ import { Text as RNText, TextProps as RNTextProps, StyleSheet } from 'react-nati
 
 import { colors, fontFamily, fontSize, lineHeight } from '../theme';
 
-/**
- * Tipografi varyantları.
- *
- * ÖNEMLİ: 'display' ve 'heading' varyantları Cormorant Garamond kullanır ve
- * SADECE başlıklarda kullanılmalıdır — buton, form alanı, seçenek kartı gibi
- * tıklanabilir yüzeylerin içinde asla kullanılmaz. Tıklanabilir alanlarda
- * her zaman 'body' veya 'bodyMedium' kullan.
- */
+/** 'display'/'heading' Cormorant Garamond kullanır, SADECE başlıklarda — tıklanabilir alanlarda 'body'/'bodyMedium' kullan. */
 export type TextVariant = 'display' | 'heading' | 'body' | 'bodyMedium' | 'caption';
 
 export interface AppTextProps extends RNTextProps {
@@ -54,10 +47,7 @@ const variantStyles = StyleSheet.create({
   },
 });
 
-/**
- * Tasarım sistemine bağlı tek metin bileşeni. Başlık fontu (Cormorant
- * Garamond) ile gövde fontu (Inter) arasındaki ayrımı burada zorunlu kılar.
- */
+/** Tasarım sistemine bağlı tek metin bileşeni — başlık/gövde font ayrımını burada zorunlu kılar. */
 export function Text({ variant = 'body', onAccent, secondary, style, ...rest }: AppTextProps) {
   return (
     <RNText

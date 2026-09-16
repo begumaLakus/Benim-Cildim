@@ -1,21 +1,7 @@
 import { ApiErrorBody } from '../types';
 
-/**
- * Backend base URL. `.env` dosyasındaki `EXPO_PUBLIC_API_BASE_URL` Expo
- * tarafından otomatik olarak inline edilir (ek bir babel eklentisi
- * gerekmez) — bkz. `.env.example`. Tanımlı değilse yerel geliştirme
- * adresine düşer.
- *
- * NOT: `EXPO_PUBLIC_` önekli değişkenler derlenmiş uygulama içinde açık
- * metin olarak durur — buraya asla gizli/hassas bir anahtar konulmaz.
- */
 export const API_BASE_URL: string = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
-/**
- * Backend'in döndürdüğü `{ code, message }` gövdesini taşıyan hata tipi —
- * ekranlar bunu yakalayıp `message`'ı doğrudan kullanıcıya gösterebilir
- * (örn. "Bu e-posta ile zaten bir hesap var").
- */
 export class ApiRequestError extends Error {
   code: string;
 
@@ -26,12 +12,44 @@ export class ApiRequestError extends Error {
   }
 }
 
-export async function postJson<TResponse>(path: string, body: unknown): Promise<TResponse> {
+export async function postJson<TResponse>(
+  path: string,
+  body: unknown,
+  token?: string,
+): Promise<TResponse> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
   });
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as ApiErrorBody | null;
+    if (errorBody?.message) {
+      throw new ApiRequestError(errorBody);
+    }
+    throw new Error(`API isteği başarısız: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as TResponse;
+}
+
+export async function getJson<TResponse>(path: string, token?: string): Promise<TResponse | null> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, { method: 'GET', headers });
+
+  if (response.status === 404) {
+    return null;
+  }
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => null)) as ApiErrorBody | null;

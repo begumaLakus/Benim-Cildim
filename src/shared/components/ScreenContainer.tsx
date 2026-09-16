@@ -7,20 +7,11 @@ import { colors, spacing, tabColors } from '../theme';
 export interface ScreenContainerProps {
   scrollable?: boolean;
   style?: ViewStyle;
-  /**
-   * 'default' (kilitli 5 renkli palette, onboarding/anket/auth) veya
-   * 'tabs' (deneme aşamasındaki pembe tonlar, sadece auth sonrası ana
-   * uygulama ekranlarında — bkz. `theme/colors.ts` içindeki `tabColors`
-   * yorumu). Varsayılan 'default' — bilerek, mevcut ekranların hiçbiri
-   * bunu belirtmeden pembeye kaymasın.
-   */
+  /** 'default' (kilitli palet) veya 'tabs' (deneme pembe palet, sadece auth sonrası ekranlar). */
   tone?: 'default' | 'tabs';
 }
 
-/**
- * Tüm Faz 1 ekranlarının ortak zemin sarmalayıcısı: sabit `background`
- * rengi ve kenar dolgusu. Ekranlar arasında tutarlı bir yerleşim sağlar.
- */
+/** Tüm Faz 1 ekranlarının ortak zemin sarmalayıcısı — sabit background rengi ve kenar dolgusu. */
 export function ScreenContainer({
   children,
   scrollable = false,
@@ -53,9 +44,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.lg,
   },
-  // NOT: ScrollView'in contentContainerStyle'ında `flex: 1` KULLANMA — içerik
-  // ekran boyuna sabitlenip taşan kısmın kaydırılmasını engeller. Kısa
-  // içerikte de üstte yığılmayı önlemek için `flexGrow: 1` yeterli.
+  // NOT: burada `flex: 1` değil `flexGrow: 1` kullan — flex: 1 taşan içeriğin kaydırılmasını engeller.
   scrollContent: {
     flexGrow: 1,
     padding: spacing.lg,

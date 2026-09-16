@@ -28,12 +28,7 @@ export const EMPTY_QUESTIONNAIRE_ANSWERS: QuestionnaireAnswers = {
   hasKnownSensitivities: null,
 };
 
-/**
- * Kayıt amaçlı fotoğraf çekimi 3 açıdan yapılır — cilt önerisinin farklı
- * yüz bölgelerini değerlendirebilmesi için önden ve iki yandan görüntü
- * gerekir. Cihazın kendisi hep ön kamerayla (selfie) çeker; kullanıcı
- * başını çevirerek açıyı değiştirir.
- */
+/** Fotoğraf çekimi 3 açıdan yapılır — kullanıcı ön kamerayla başını çevirerek açıyı değiştirir. */
 export type CameraAngle = 'front' | 'left' | 'right';
 
 export const CAMERA_ANGLES: CameraAngle[] = ['front', 'left', 'right'];

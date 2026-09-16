@@ -1,9 +1,4 @@
-/**
- * Backend'deki (backend/src/types/auth.types.ts) sözleşmeyle birebir
- * eşleşecek şekilde tasarlandı — iki taraf da bağımsız paketler olduğu için
- * (RN app ayrı, backend ayrı) tip paylaşımı yapılamıyor, elle senkron
- * tutuluyor. İkisinden biri değişirse diğeri de güncellenmeli.
- */
+/** Backend'deki auth.types.ts ile elle senkron tutulur (ayrı paketler, tip paylaşımı yok). */
 export interface AuthCredentials {
   email: string;
   password: string;

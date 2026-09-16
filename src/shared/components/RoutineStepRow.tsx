@@ -8,12 +8,7 @@ import { Text } from './Text';
 import { borderRadius, colors, spacing } from '../theme';
 import { RoutineStep } from '../../types';
 
-/**
- * Ürün kategorisine göre temsili bir ikon — gerçek bir ürün fotoğrafı değil,
- * sonuç ekranının "tamamen yazı" hissini kırmak için. Backend/mock ileride
- * yeni bir kategori eklerse `DEFAULT_CATEGORY_ICON`'a düşer, uygulama
- * çökmez.
- */
+/** Ürün kategorisine göre temsili ikon. Bilinmeyen kategori `DEFAULT_CATEGORY_ICON`'a düşer, çökmez. */
 const CATEGORY_ICONS: Record<string, IoniconsIconName> = {
   Temizleyici: 'water-outline',
   Serum: 'flask-outline',

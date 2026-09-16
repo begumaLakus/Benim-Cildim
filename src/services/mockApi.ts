@@ -1,19 +1,19 @@
 import { RoutineRecommendationResponse, SubmitOnboardingRequest } from '../types';
 
-/**
- * GEÇİCİ: Express backend'i hazır olana kadar UI akışını uçtan uca test
- * edebilmek için sahte gecikmeli bir yanıt üretir. `services/api.ts` içindeki
- * gerçek `submitOnboarding` ile aynı sözleşmeyi kullanır; backend hazır
- * olduğunda bu dosya silinip ekranlarda `api.ts` içe aktarımına geçilecek.
- */
+/** GEÇİCİ: backend hazır olana kadar UI'ı test edebilmek için sahte gecikmeli yanıt üretir — `api.ts` ile aynı sözleşme. */
 export async function mockSubmitOnboarding(
-  _request: SubmitOnboardingRequest,
+  request: SubmitOnboardingRequest,
 ): Promise<RoutineRecommendationResponse> {
   await new Promise((resolve) => setTimeout(resolve, 1800));
 
   return {
     generatedAt: new Date().toISOString(),
     productSuggestion: null,
+
+    skinSummary: {
+      skinType: request.answers.skinType,
+      concerns: request.answers.concerns,
+    },
     routine: {
       morning: [
         {

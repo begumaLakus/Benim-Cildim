@@ -23,16 +23,7 @@ const ANGLE_INSTRUCTION: Record<CameraAngle, string> = {
   right: 'Başını hafifçe sağa çevirip çek.',
 };
 
-/**
- * Anket akışındaki kamera adımı: kullanıcıdan sırasıyla önden, soldan ve
- * sağdan birer fotoğraf ister. Diğer sorularla aynı geri/ilerleme başlığını
- * (StepHeader, tone="dark") kullanarak akışla görsel bütünlüğü korur.
- *
- * Yerleşim kararı: bu adım, cinsiyet sorusundan hemen sonra ve kalan
- * cilt/anket sorularından önce gelir — kilitli akışın "cinsiyet seçimi ->
- * fotoğraf çekimi -> anket" sırasını korur ve en donanım-yoğun adımı
- * akışın başında bitirir.
- */
+/** Anket akışındaki kamera adımı: kullanıcıdan sırasıyla önden, soldan ve sağdan birer fotoğraf ister. */
 export function CameraStep({ stepNumber, totalSteps, onNext, onBack }: StepProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const [angleIndex, setAngleIndex] = useState(0);

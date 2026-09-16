@@ -32,9 +32,11 @@ npm run dev
 ```
 
 `http://localhost:3000/api/health` 200 dönüyorsa backend ayakta demektir.
-Şu an sadece `/api/auth/sign-up` ve `/api/auth/login` uçları var (bkz.
-ADR-009). Onboarding/anket/rutin uçları (`/api/onboarding`) henüz backend'de
-yok — `src/services/mockApi.ts` bunun için hâlâ kullanılıyor.
+Şu an `/api/auth/sign-up`, `/api/auth/login`, (giriş yapmış kullanıcılar için,
+`Authorization: Bearer <token>`) `POST /api/routine-history` ve
+`GET /api/routine-history/latest` uçları var (bkz. ADR-009, ADR-011, ADR-012).
+Onboarding/anket/rutin önerisi ucu (`/api/onboarding`) henüz backend'de yok —
+`src/services/mockApi.ts` bunun için hâlâ kullanılıyor.
 
 ## Durum
 

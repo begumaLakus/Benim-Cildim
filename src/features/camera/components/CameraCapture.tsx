@@ -15,17 +15,9 @@ export interface CameraCaptureProps {
   onCaptured: (uri: string) => void;
 }
 
-/**
- * Tek bir açı için kamera önizleme + çekim + önizleme/tekrar-çek akışını
- * yönetir. Kaçıncı açıda olunduğu (front/left/right sırası) bu bileşenin
- * dışında (CameraStep) tutulur — bu bileşen izin ZATEN verilmiş varsayımıyla
- * çalışır, izin akışı CameraStep'te ayrıca ele alınır.
- */
 export function CameraCapture({ instructionTitle, instruction, onCaptured }: CameraCaptureProps) {
   const cameraRef = useRef<CameraView>(null);
-  // Bu bileşen yalnızca izin verildikten sonra (CameraStep tarafından) mount
-  // edilir; yine de native oturum `onCameraReady` tetiklenene kadar
-  // takePictureAsync çağırmıyoruz (aksi halde CameraNotReadyException).
+
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -40,8 +32,6 @@ export function CameraCapture({ instructionTitle, instruction, onCaptured }: Cam
       }
     } catch {
       // Kamera oturumu tam hazır olmadan veya kısa süreli bir donanım
-      // hatasında burada sessizce yutuyoruz — kullanıcı butona tekrar
-      // basabilir; akışı bir hata ekranıyla kesmeye gerek yok.
     } finally {
       setIsCapturing(false);
     }
