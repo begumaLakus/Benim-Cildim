@@ -8,5 +8,5 @@ export {
 export { mockSubmitOnboarding } from './mockApi';
 export { deleteLocalPhoto } from './camera';
 export { getStoredPhotoConsent, setStoredPhotoConsent } from './storage';
-export { signUp, login } from './authApi';
-export { ApiRequestError } from './httpClient';
+export { signUp, login, forgotPassword } from './authApi';
+export { ApiRequestError, setSessionExpiredHandler } from './httpClient';

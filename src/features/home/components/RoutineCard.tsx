@@ -1,6 +1,6 @@
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { AffiliatedProduct, ProductSlot } from './ProductSlot';
 import { Card, Text } from '../../../shared/components';
@@ -15,6 +15,8 @@ export interface RoutineCardProps {
   affiliatedProduct?: AffiliatedProduct;
   /** Doluysa adımın altında "neden önerildi" açıklaması gösterilir. */
   reason?: string | null;
+  /** Bu adımın işaretleme isteği sürüyor mu — checkbox yerine spinner gösterir ve devre dışı bırakır. */
+  isToggling?: boolean;
 }
 
 /** Rutinim'deki tek rutin adımı kartı. `RoutineStepRow`'dan ayrı, sadece Rutinim'e özel. */
@@ -24,6 +26,7 @@ export function RoutineCard({
   onToggleComplete,
   affiliatedProduct,
   reason,
+  isToggling = false,
 }: RoutineCardProps) {
   return (
     <Card style={styles.card}>
@@ -49,13 +52,25 @@ export function RoutineCard({
         </View>
         <Pressable
           accessibilityRole="checkbox"
-          accessibilityState={{ checked: completed }}
+          accessibilityState={{ checked: completed, disabled: isToggling }}
           accessibilityLabel={`${step.activeIngredient} tamamlandı olarak işaretle`}
           hitSlop={8}
+          disabled={isToggling}
           onPress={onToggleComplete}
-          style={[styles.checkbox, completed && styles.checkboxChecked]}
+          style={[
+            styles.checkbox,
+            completed && styles.checkboxChecked,
+            isToggling && styles.checkboxLoading,
+          ]}
         >
-          {completed ? <Ionicons name="checkmark" size={15} color={colors.textOnAccent} /> : null}
+          {isToggling ? (
+            <ActivityIndicator
+              size="small"
+              color={completed ? colors.textOnAccent : colors.accent}
+            />
+          ) : completed ? (
+            <Ionicons name="checkmark" size={15} color={colors.textOnAccent} />
+          ) : null}
         </Pressable>
       </View>
       {affiliatedProduct ? <ProductSlot product={affiliatedProduct} /> : null}
@@ -107,5 +122,8 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: tabColors.highlight,
     borderColor: tabColors.highlight,
+  },
+  checkboxLoading: {
+    opacity: 0.7,
   },
 });
