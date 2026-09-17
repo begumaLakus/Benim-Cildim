@@ -8,6 +8,7 @@ Format (cuid v1, 25 karakter): 'c' + zaman damgasi + sayac + parmak izi + rastge
 """
 
 import os
+import platform
 import secrets
 import threading
 import time
@@ -47,7 +48,7 @@ def _next_counter() -> int:
 def _fingerprint() -> str:
     """Surec kimligi + makine adindan tureyen, surec omru boyunca sabit blok."""
     pid = _to_base36(os.getpid())
-    hostname = os.uname().nodename
+    hostname = platform.node()
     host_value = len(hostname) + _BASE + sum(ord(char) for char in hostname)
     return _pad(pid, 2)[-2:] + _pad(_to_base36(host_value), 2)[-2:]
 
