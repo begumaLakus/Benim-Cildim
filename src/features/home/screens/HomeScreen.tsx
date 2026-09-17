@@ -1,12 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { RoutineCard } from '../components/RoutineCard';
 import { RoutineProgressBar } from '../components/RoutineProgressBar';
 import { getLocalDateKey } from '../utils/date';
 import { formatRoutineReason } from '../utils/routineReason';
 import { formatSkinSummary } from '../utils/skinSummary';
-import { ScreenContainer, SegmentedControl, Text } from '../../../shared/components';
+import { Card, ScreenContainer, SegmentedControl, Text } from '../../../shared/components';
 import { borderRadius, colors, spacing, tabColors } from '../../../shared/theme';
 import {
   ApiRequestError,
@@ -37,26 +37,36 @@ export function HomeScreen() {
   const recommendation = useOnboardingStore((state) => state.recommendation);
   const setRecommendation = useOnboardingStore((state) => state.setRecommendation);
   const markRecommendationSynced = useOnboardingStore((state) => state.markRecommendationSynced);
-  const [isLoading, setIsLoading] = useState(true);
+  // Lazy init: token yoksa `isLoading` hiç true'dan geçmeden false başlar —
+  // bu sayede effect içinde senkron bir setState çağrısına gerek kalmıyor.
+  const [isLoading, setIsLoading] = useState(() => Boolean(token));
   const [loadError, setLoadError] = useState<string | undefined>();
+  // Üst bardaki "Tekrar dene" isteği sürerken sadece o küçük alanda spinner
+  // gösterir — `isLoading` gibi tüm ekranı kaplayan bir yükleniyor durumuna
+  // düşürmez, çünkü `recommendation` zaten ekranda gösterilmeye devam eder.
+  const [isRetrying, setIsRetrying] = useState(false);
   const [activeSlot, setActiveSlot] = useState<RoutineSlot>('morning');
   const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(new Set());
   const [isTogglingStepId, setIsTogglingStepId] = useState<string | null>(null);
 
   const todayKey = useMemo(() => getLocalDateKey(), []);
 
+  const isMountedRef = useRef(true);
   useEffect(() => {
-    let isMounted = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-    async function loadLatestRoutine() {
+  const loadLatestRoutine = useCallback(
+    async (mode: 'initial' | 'retry') => {
       if (!token) {
-        setIsLoading(false);
         return;
       }
 
       try {
         const latest = await getLatestRoutineHistory(token);
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
 
         if (latest) {
           setRecommendation(latest);
@@ -70,25 +80,40 @@ export function HomeScreen() {
         // göstergesi açmaya değmeyecek kadar hızlı bir çağrı, bu yüzden
         // `isLoading` bunu beklemiyor.
         const progress = await getRoutineProgress(todayKey, token);
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
         if (progress) {
           setCompletedStepIds(new Set(progress.completedStepIds));
         }
       } catch (error) {
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
         setLoadError(
           error instanceof ApiRequestError ? error.message : 'Rutin yüklenirken bir sorun oluştu.',
         );
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (!isMountedRef.current) return;
+        if (mode === 'initial') {
+          setIsLoading(false);
+        } else {
+          setIsRetrying(false);
+        }
       }
-    }
+    },
+    [token, todayKey, setRecommendation, markRecommendationSynced],
+  );
 
-    loadLatestRoutine();
-    return () => {
-      isMounted = false;
-    };
-  }, [token, todayKey, setRecommendation, markRecommendationSynced]);
+  useEffect(() => {
+    // `loadLatestRoutine` ilk `await`e kadar hicbir state guncellemiyor (bkz.
+    // yukarisi); ESLint bunu derin analiz etmeden isaretliyor, bilerek kapatildi.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadLatestRoutine('initial');
+  }, [loadLatestRoutine]);
+
+  const handleRetryLoad = useCallback(() => {
+    // Bu setState'ler bir tıklama olayindan (effect degil) cagrildigi icin sorun yok.
+    setIsRetrying(true);
+    setLoadError(undefined);
+    loadLatestRoutine('retry');
+  }, [loadLatestRoutine]);
 
   const skinTag = useMemo(() => formatSkinSummary(recommendation?.skinSummary), [recommendation]);
 
@@ -153,6 +178,31 @@ export function HomeScreen() {
         ) : null}
       </View>
 
+      {loadError ? (
+        <Card style={styles.errorBanner}>
+          <Text variant="caption" style={styles.errorBannerLabel}>
+            {loadError}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tekrar dene"
+            accessibilityState={{ disabled: isRetrying }}
+            disabled={isRetrying}
+            hitSlop={8}
+            onPress={handleRetryLoad}
+            style={styles.retryButton}
+          >
+            {isRetrying ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <Text variant="bodyMedium" style={styles.retryLabel}>
+                Tekrar dene
+              </Text>
+            )}
+          </Pressable>
+        </Card>
+      ) : null}
+
       <SegmentedControl options={SLOT_OPTIONS} value={activeSlot} onChange={setActiveSlot} />
 
       <RoutineProgressBar
@@ -168,6 +218,7 @@ export function HomeScreen() {
             step={step}
             completed={completedStepIds.has(step.id)}
             onToggleComplete={() => toggleStepCompleted(step.id)}
+            isToggling={isTogglingStepId === step.id}
             reason={formatRoutineReason(step.productCategory, recommendation.skinSummary)}
             // Faz 3'teki güzellik merkezi kataloğu bekliyor (bkz. ADR-015) —
             // gerçek veri kaynağı olmadığı için bilerek her zaman `undefined`;
@@ -195,6 +246,24 @@ const styles = StyleSheet.create({
   },
   skinTagLabel: {
     color: colors.textPrimary,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  errorBannerLabel: {
+    flex: 1,
+    color: colors.error,
+  },
+  retryButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  retryLabel: {
+    color: colors.accent,
   },
   list: {
     marginTop: spacing.sm,
