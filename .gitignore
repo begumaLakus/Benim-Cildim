@@ -41,9 +41,18 @@ yarn-error.*
 /ios
 /android
 
-# Backend (Express/Prisma) — ayri paket, kendi bagimliliklari
-backend/node_modules/
-backend/dist/
+# Backend (FastAPI/SQLAlchemy) — ayri paket, kendi bagimliliklari
+backend/.venv/
 backend/.env
-backend/prisma/*.db
-backend/prisma/*.db-journal
+backend/*.db
+backend/*.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Eski Node backend'inden kalan, artik kullanilmayan klasor (silinebilir)
+backend/node_modules/
