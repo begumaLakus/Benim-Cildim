@@ -1,0 +1,6 @@
+# Gelistirme/test bagimliliklari — Node tarafindaki `devDependencies` karsiligi.
+-r requirements.txt
+
+httpx==0.28.1
+httpcore==1.0.9
+ruff==0.16.8

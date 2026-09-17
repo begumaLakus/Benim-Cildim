@@ -75,14 +75,62 @@ Bu üç yol, `app/index.tsx`'te (mevcut dosya) bir yönlendirme (redirect) mant�
 
 ---
 
-## 5. Backend etkisi (Node.js/Express — zaten kilitli stack)
+## 5. Backend etkisi (Python/FastAPI)
 
-Bu doküman sadece ekranları değil, arkasındaki gereksinimleri de değiştiriyor, açıkça belirtmek isterim:
+Bu doküman sadece ekranları değil, arkasındaki gereksinimleri de değiştiriyor, açıkça belirtmek isterim. Backend artık **Python + FastAPI** ile yazılıyor; ilk kurulan Node.js/Express sürümü bire bir çevrildi, ortadan kaldırıldı.
 
-- `POST /auth/sign-up`, `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/reset-password` uçları.
-- JWT (veya benzeri) oturum token'ı üretimi + `expo-secure-store` ile cihazda saklama.
-- Misafirken toplanan anket cevaplarının/rutinin, kayıt anında kullanıcı hesabına bağlanması (guest → user migration).
-- Kullanıcı bazlı veri modeli: `User`, `RoutineHistory` (geçmiş sonuçlar), `RoutineProgress` (günlük checklist durumu).
+**Dikkat — çözülmesi gereken bir çelişki var:** ADR-001 backend'i "Node.js/Express" olarak **kilitli** işaretliyor. Bu değişiklik o kararı geçersiz kılıyor, dolayısıyla `docs/adr.md`'ye yeni bir ADR (ADR-017) olarak işlenmesi gerekiyor. İşlenmezse ADR dosyası kodla çelişir durumda kalır.
+
+### API sözleşmesi değişmedi
+
+Uçların yolları, istek/yanıt gövdeleri, HTTP durum kodları ve hata gövdeleri (`{ code, message }`) Express sürümüyle **birebir aynı**. Bu bilinçli bir kısıt: RN tarafında tek satır değişmesin diye. `src/services/httpClient.ts`, `authApi.ts` ve `api.ts` olduğu gibi çalışıyor.
+
+| Uç                                  | Durum                                              |
+| ----------------------------------- | -------------------------------------------------- |
+| `POST /api/auth/sign-up`            | çalışıyor                                          |
+| `POST /api/auth/login`              | çalışıyor                                          |
+| `POST /api/routine-history`         | çalışıyor (token zorunlu)                          |
+| `GET /api/routine-history/latest`   | çalışıyor (token zorunlu)                          |
+| `GET /api/routine-progress?date=`   | çalışıyor (token zorunlu)                          |
+| `POST /api/routine-progress/toggle` | çalışıyor (token zorunlu)                          |
+| `POST /api/auth/forgot-password`    | henüz yok (bkz. bölüm 2, madde 7)                  |
+| `POST /api/auth/reset-password`     | henüz yok (bkz. bölüm 2, madde 8)                  |
+| `POST /api/onboarding`              | henüz yok — `src/services/mockApi.ts` kullanılıyor |
+
+### Kütüphane karşılıkları
+
+| Express sürümünde       | FastAPI sürümünde                                                               |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| Express                 | FastAPI + Uvicorn                                                               |
+| Zod (doğrulama)         | Pydantic v2                                                                     |
+| Prisma Client           | SQLAlchemy 2.0                                                                  |
+| Prisma Migrate          | Alembic                                                                         |
+| `jsonwebtoken`          | PyJWT — aynı algoritma (HS256), aynı payload (`userId`), aynı ömür (30 gün)     |
+| `bcrypt` (npm)          | `bcrypt` (PyPI) — aynı algoritma, aynı 12 tur                                   |
+| `cors`                  | FastAPI `CORSMiddleware`                                                        |
+| `dotenv`                | `python-dotenv`                                                                 |
+| `utils/asyncHandler.ts` | karşılığı yok, gerekmiyor — FastAPI reddedilen promise sorununu kendisi çözüyor |
+
+Klasör düzeni de korundu: `routes/` → `app/routers/`, `controllers/` → `app/controllers/`, `types/` → `app/schemas/`, `middleware/` → `app/middleware/`, `utils/` → `app/utils/`, `prisma/schema.prisma` → `app/models.py`.
+
+### FastAPI'ye özel, atlanmaması gereken üç nokta
+
+Bunlar Express'te bedava gelen ama FastAPI'de elle kurulması gereken şeyler — atlanırsa sessizce bozulurlar:
+
+1. **Hata gövdesi elle geri çekilmeli.** FastAPI doğrulama hatasında `422` + `{ "detail": [...] }`, bilinmeyen route'ta `404` + `{ "detail": "Not Found" }` döner. RN istemcisi ise her hatayı `{ code, message }` olarak okuyor (`httpClient.ts`). `app/middleware/error_handler.py` dört ayrı işleyici kaydederek gövdeyi ve durum kodunu (doğrulama = `400`) Express'in döndüğü hâle geri çekiyor. Atlanırsa ekranlardaki hata mesajları sessizce boşalır.
+2. **Doğrulama mesajları Türkçe kalmalı.** Zod'daki mesajlar ("Sifre en az 8 karakter olmali." gibi) kullanıcıya doğrudan gösteriliyor. Pydantic'in İngilizce varsayılanları kullanılamazdı; mesajlar `app/schemas/base.py`'deki doğrulayıcılarda harfi harfine korundu.
+3. **SQLite yabancı anahtar kontrolü elle açılmalı.** Prisma bunu kendi bağlantılarında açıyordu, SQLite'ta varsayılan KAPALI. `app/db.py` her bağlantıda `PRAGMA foreign_keys=ON` çalıştırıyor — yoksa silinmiş bir kullanıcıya ait rutin kaydı sessizce yazılır ve o uçtaki `401` dalı hiç çalışmazdı.
+
+### Veri modeli (değişmedi)
+
+`User`, `RoutineHistory` (geçmiş sonuçlar), `RoutineProgress` (günlük checklist durumu). Tablo ve kolon adları Prisma'nın ürettiğiyle birebir aynı tutuldu (camelCase kolonlar, yabancı anahtar ve benzersiz indeks adları dahil), bu yüzden eldeki `dev.db` dosyası `alembic stamp head` ile olduğu gibi devralınabiliyor.
+
+### Hâlâ gereken işler
+
+- JWT oturum token'ı üretimi ve `expo-secure-store` ile cihazda saklama: **tamam** (`src/store/useAuthStore.ts`).
+- Misafirken toplanan anket cevaplarının/rutinin kayıt anında hesaba bağlanması (guest → user migration): **tamam** (`useAuthStore.ts` içindeki `syncGuestRoutineIfPresent`).
+- Şifre sıfırlama akışı (bölüm 2, madde 7-8): **açık**. Uçların kendisi kolay, ama e-posta gönderimi bir dış servis kararı gerektiriyor (SMTP / Resend / SES) ve bu karar henüz verilmedi.
+- Backend'de otomatik test yok. Express sürümünde de yoktu; sözleşme artık iki dilde birden tutulmadığı için `pytest` + FastAPI `TestClient` ile uçları kilitlemek düşük maliyetli bir kazanç olurdu.
 
 ---
 
